@@ -1,0 +1,253 @@
+# Example dashboard for Apple Health Card.
+# Paste into: Settings > Dashboards > (your dashboard) > Edit > three dots > Raw configuration editor.
+# Replace "iphone" with your own Companion app sensor prefix (sensor.<prefix>_heart_rate ...).
+#
+# The "Andamento" view needs apexcharts-card (HACS).
+# The sleep and heart charts use raw history grouped by day ("last" value), NOT daily
+# statistics: Health data only reaches Home Assistant when the iPhone syncs, so daily
+# statistics would repeat the previous night on days without a sync and mix two
+# nights on the day a new value arrives. Raw history is limited by the recorder
+# retention (purge_keep_days, 10 days by default).
+views:
+- title: Oggi
+  path: oggi
+  icon: mdi:heart-pulse
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    column_span: 2
+    cards:
+    - type: custom:apple-health-card
+      title: Salute
+      prefix: iphone
+      grid_options:
+        columns: full
+- icon: mdi:chart-line
+  max_columns: 2
+  path: andamento
+  sections:
+  - cards:
+    - heading: Sonno
+      icon: mdi:bed
+      type: heading
+    - type: custom:apexcharts-card
+      graph_span: 14d
+      span:
+        end: day
+      grid_options:
+        columns: full
+      header:
+        show: true
+        title: Sonno totale per notte (min)
+        show_states: false
+      apex_config:
+        chart:
+          height: 240
+        legend:
+          show: false
+        tooltip:
+          y:
+            formatter: 'EVAL:function(v){ return (v === null || v === undefined) ? ''—'' : Math.round(v * 10) / 10 + '' min''; }'
+      series:
+      - entity: sensor.iphone_sleep_duration
+        name: Sonno
+        type: column
+        color: '#5E5CE6'
+        extend_to: false
+        group_by:
+          func: last
+          duration: 1d
+          fill: 'null'
+    - type: custom:apexcharts-card
+      graph_span: 14d
+      span:
+        end: day
+      grid_options:
+        columns: full
+      header:
+        show: true
+        title: Fasi del sonno (min)
+        show_states: false
+      stacked: true
+      apex_config:
+        chart:
+          height: 260
+        legend:
+          show: true
+        tooltip:
+          y:
+            formatter: 'EVAL:function(v){ return (v === null || v === undefined) ? ''—'' : Math.round(v * 10) / 10 + '' min''; }'
+      series:
+      - entity: sensor.iphone_deep_sleep
+        name: Profondo
+        type: column
+        color: '#5E5CE6'
+        extend_to: false
+        group_by:
+          func: last
+          duration: 1d
+          fill: 'null'
+      - entity: sensor.iphone_core_sleep
+        name: Core
+        type: column
+        color: '#0A84FF'
+        extend_to: false
+        group_by:
+          func: last
+          duration: 1d
+          fill: 'null'
+      - entity: sensor.iphone_rem_sleep
+        name: REM
+        type: column
+        color: '#64D2FF'
+        extend_to: false
+        group_by:
+          func: last
+          duration: 1d
+          fill: 'null'
+      - entity: sensor.iphone_awake
+        name: Sveglio
+        type: column
+        color: '#FF9F0A'
+        extend_to: false
+        group_by:
+          func: last
+          duration: 1d
+          fill: 'null'
+    type: grid
+  - cards:
+    - heading: Cuore
+      icon: mdi:heart
+      type: heading
+    - type: custom:apexcharts-card
+      graph_span: 14d
+      span:
+        end: day
+      grid_options:
+        columns: full
+      header:
+        show: true
+        title: FC a riposo (bpm)
+        show_states: false
+      apex_config:
+        chart:
+          height: 220
+        legend:
+          show: false
+        stroke:
+          curve: straight
+          width: 2
+        markers:
+          size: 5
+        tooltip:
+          y:
+            formatter: 'EVAL:function(v){ return (v === null || v === undefined) ? ''—'' : Math.round(v * 10) / 10 + '' bpm''; }'
+      series:
+      - entity: sensor.iphone_resting_heart_rate
+        name: FC a riposo
+        type: line
+        color: '#FF453A'
+        extend_to: false
+        group_by:
+          func: last
+          duration: 1d
+          fill: 'null'
+    - type: custom:apexcharts-card
+      graph_span: 14d
+      span:
+        end: day
+      grid_options:
+        columns: full
+      header:
+        show: true
+        title: Variabilità HRV (ms)
+        show_states: false
+      apex_config:
+        chart:
+          height: 220
+        legend:
+          show: false
+        stroke:
+          curve: straight
+          width: 2
+        markers:
+          size: 5
+        tooltip:
+          y:
+            formatter: 'EVAL:function(v){ return (v === null || v === undefined) ? ''—'' : Math.round(v * 10) / 10 + '' ms''; }'
+      series:
+      - entity: sensor.iphone_heart_rate_variability
+        name: HRV
+        type: line
+        color: '#BF5AF2'
+        extend_to: false
+        group_by:
+          func: last
+          duration: 1d
+          fill: 'null'
+    type: grid
+  - cards:
+    - heading: Attività
+      icon: mdi:walk
+      type: heading
+    - chart_type: bar
+      days_to_show: 30
+      entities:
+      - color: '#FF9F0A'
+        entity: sensor.iphone_health_steps
+        name: Passi
+      grid_options:
+        columns: full
+      period: day
+      stat_types:
+      - change
+      title: Passi al giorno
+      type: statistics-graph
+    - chart_type: bar
+      days_to_show: 30
+      entities:
+      - color: '#FA114F'
+        entity: sensor.iphone_active_energy
+        name: Energia attiva
+      grid_options:
+        columns: full
+      period: day
+      stat_types:
+      - change
+      title: Energia attiva al giorno (kcal)
+      type: statistics-graph
+    type: grid
+  - cards:
+    - heading: Corpo
+      icon: mdi:scale-bathroom
+      type: heading
+    - chart_type: line
+      days_to_show: 90
+      entities:
+      - color: '#AF8E6B'
+        entity: sensor.iphone_weight
+        name: Peso
+      grid_options:
+        columns: full
+      period: week
+      stat_types:
+      - mean
+      title: Peso (kg)
+      type: statistics-graph
+    - chart_type: line
+      days_to_show: 90
+      entities:
+      - color: '#30D158'
+        entity: sensor.iphone_vo2_max
+        name: VO2 max
+      grid_options:
+        columns: full
+      period: week
+      stat_types:
+      - mean
+      title: VO2 max
+      type: statistics-graph
+    type: grid
+  title: Andamento
+  type: sections
