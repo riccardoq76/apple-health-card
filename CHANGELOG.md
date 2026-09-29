@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1 — 2026-09-29
+
+- Sleep legend on wide screens: each value now sits next to its label instead of being pushed to the far right. Phone layout unchanged.
+
 ## 2.0.0 — 2026-09-29
 
 First public release.
