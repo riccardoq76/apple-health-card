@@ -30,7 +30,7 @@
  *   hide_missing: nasconde i riquadri senza dato (default true)
  */
 
-const VERSION = "2.0.0";
+const VERSION = "2.0.1";
 
 /* ------------------------------------------------------------------ */
 /* Definizione metriche                                                */
@@ -475,7 +475,8 @@ const STYLE = `
     .grid { grid-template-columns:repeat(3,1fr); }
     .ring-figure { width:96px; height:96px; }
     .ring-value { font-size:18px; }
-    .sleep-legend { grid-template-columns:repeat(4,1fr); }
+    .sleep-legend { display:flex; flex-wrap:wrap; gap:6px 28px; }
+    .sleep-legend .legend-value { margin-left:2px; }
   }
   @container (min-width: 720px) {
     .title { font-size:32px; }
