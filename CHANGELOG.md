@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Tiles: the "x min ago" label is now anchored to the bottom of each tile, so it lines up across a row even when some tiles show the 7-day comparison line and others do not.
+
 ## 2.1.0 — 2026-10-01
 
 - New optional `averages` option: shows the difference from a 7-day average under sleep, resting heart rate and HRV. The averages come from Home Assistant Statistics helpers (see README).

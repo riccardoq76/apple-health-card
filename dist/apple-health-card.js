@@ -510,6 +510,7 @@ const STYLE = `
   .tile-unit { font-size:12px; font-weight:600; color:var(--ahc-muted); margin-left:4px; }
   .delta { display:block; font-size:11px; font-weight:600; color:var(--ahc-muted); }
   .age { display:block; font-size:11px; color:var(--ahc-muted); margin-top:2px; }
+  .tile .age { margin-top:auto; }
   .age.stale { color: var(--warning-color, #FF9F0A); font-weight:600; }
   .sleep { padding:14px; display:flex; flex-direction:column; gap:12px; }
   .sleep-head { display:flex; align-items:center; gap:10px; cursor:pointer; }
