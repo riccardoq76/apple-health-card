@@ -17,7 +17,7 @@ A Home Assistant Lovelace card with an Apple Health–style layout, built for th
 
 <sub>Screenshots use demo values, not real health data.</sub>
 
-> The card speaks **English** and **Italian** and follows the language of your Home Assistant (see [Language](#language)). Other translations are welcome as pull requests. The screenshots above show the Italian interface.
+> The card speaks **English**, **Italian** and **Spanish** and follows the language of your Home Assistant (see [Language](#language)). Other translations are welcome as pull requests. The screenshots above show the Italian interface.
 
 ## What it shows
 
@@ -76,7 +76,7 @@ All options:
 | `goals` | see below | Ring goals: `active_energy` (500 kcal), `exercise` (30 min), `steps` (10000). |
 | `stale_hours` | `12` | After how many hours a value is marked as old. |
 | `hide_missing` | `true` | Hide tiles whose sensor is missing or unavailable. |
-| `language` | `auto` | `auto` follows Home Assistant. Use `en` or `it` to force a language. |
+| `language` | `auto` | `auto` follows Home Assistant. Use `en`, `it` or `es` to force a language. |
 | `averages` | — | Map of metric → 7-day average sensor. Supported metrics: `sleep`, `resting_heart_rate`, `hrv`. |
 | `min_coverage` | `0.5` | Minimum share of the 7 days the average must cover (0 to 1). Below it, the difference is hidden. |
 
@@ -124,11 +124,11 @@ entities:
 
 ## Language
 
-The card is available in English and Italian.
+The card is available in English, Italian and Spanish.
 
 - By default (`language: auto`) it uses the language Home Assistant is showing for the current user. If that language has no translation yet, the texts are in English.
 - Numbers and dates follow the same language, even when the texts fall back to English.
-- To force a language, set `language: en` or `language: it` (the visual editor has a selector too). Useful if your Home Assistant is in English but you want Italian, or the other way round.
+- To force a language, set `language: en`, `language: it` or `language: es` (the visual editor has a selector too). Useful if your Home Assistant is in English but you want Italian, or the other way round.
 
 To add a language: in `dist/apple-health-card.js`, copy the `en` block inside `I18N`, translate the texts, and open a pull request.
 
