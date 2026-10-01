@@ -51,7 +51,7 @@ Tiles whose sensor is missing or `unavailable` are hidden. Tapping a tile opens 
 
 1. Copy `dist/apple-health-card.js` to `/config/www/apple-health-card.js`.
 2. Settings → Dashboards → three dots → **Resources** → Add resource:
-   URL `/local/apple-health-card.js?v=2.0.0`, type **JavaScript module**.
+   URL `/local/apple-health-card.js?v=2.2.0`, type **JavaScript module**.
    Change the `?v=` number every time you replace the file, otherwise phones keep the cached copy.
 3. Reload the browser.
 
