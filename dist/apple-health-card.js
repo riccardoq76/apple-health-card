@@ -28,6 +28,7 @@
  *   goals:        obiettivi anelli { steps, active_energy, exercise }
  *   stale_hours:  dopo quante ore un dato è "vecchio" (default 12)
  *   hide_missing: nasconde i riquadri senza dato (default true)
+ *   language:     "auto" (default, segue la lingua di Home Assistant), "it" o "en"
  *   averages:     mappa metrica → sensore "media 7 giorni" (opzionale).
  *                 Metriche supportate: sleep, resting_heart_rate, hrv.
  *                 Mostra la differenza rispetto alla media sotto il valore.
@@ -45,39 +46,39 @@ const VERSION = "2.1.0";
 /* ------------------------------------------------------------------ */
 
 const RINGS = [
-  { key: "active_energy", label: "Movimento", suffix: "active_energy", color: "#FA114F", goal: 500, unit: "kcal" },
-  { key: "exercise", label: "Esercizio", suffix: "exercise_time", color: "#92E82A", goal: 30, unit: "min" },
-  { key: "steps", label: "Passi", suffix: "health_steps", color: "#FF9F0A", goal: 10000, unit: "passi" },
+  { key: "active_energy", suffix: "active_energy", color: "#FA114F", goal: 500, unit: "kcal" },
+  { key: "exercise", suffix: "exercise_time", color: "#92E82A", goal: 30, unit: "min" },
+  { key: "steps", suffix: "health_steps", color: "#FF9F0A", goal: 10000, unit: "passi" },
 ];
 
 const SECTIONS = [
   {
-    title: "Attività",
+    id: "activity",
     metrics: [
-      { key: "distance", label: "Distanza a piedi", suffix: "walking_running_distance", icon: "location", color: "#0A84FF", digits: 2 },
-      { key: "flights", label: "Piani saliti", suffix: "flights_climbed", icon: "stairs", color: "#5856D6", digits: 0 },
-      { key: "resting_energy", label: "Energia a riposo", suffix: "resting_energy", icon: "flame", color: "#FF6B35", digits: 0 },
-      { key: "vo2max", label: "VO2 max", suffix: "vo2_max", icon: "lungs", color: "#30D158", digits: 1, body: true },
+      { key: "distance", suffix: "walking_running_distance", icon: "location", color: "#0A84FF", digits: 2 },
+      { key: "flights", suffix: "flights_climbed", icon: "stairs", color: "#5856D6", digits: 0 },
+      { key: "resting_energy", suffix: "resting_energy", icon: "flame", color: "#FF6B35", digits: 0 },
+      { key: "vo2max", suffix: "vo2_max", icon: "lungs", color: "#30D158", digits: 1, body: true },
     ],
   },
   {
-    title: "Cuore e respirazione",
+    id: "heart",
     metrics: [
-      { key: "heart_rate", label: "Frequenza cardiaca", suffix: "heart_rate", icon: "heart", color: "#FF2D55", digits: 0 },
-      { key: "resting_heart_rate", label: "FC a riposo", suffix: "resting_heart_rate", icon: "heart", color: "#FF453A", digits: 0 },
-      { key: "walking_heart_rate", label: "FC camminando", suffix: "walking_heart_rate_average", icon: "heart", color: "#FF6482", digits: 0 },
-      { key: "hrv", label: "Variabilità (HRV)", suffix: "heart_rate_variability", icon: "waveform", color: "#BF5AF2", digits: 1 },
-      { key: "spo2", label: "Ossigeno nel sangue", suffix: "blood_oxygen", icon: "lungs", color: "#64D2FF", digits: 0 },
-      { key: "respiratory_rate", label: "Freq. respiratoria", suffix: "respiratory_rate", icon: "wind", color: "#40C8E0", digits: 0 },
+      { key: "heart_rate", suffix: "heart_rate", icon: "heart", color: "#FF2D55", digits: 0 },
+      { key: "resting_heart_rate", suffix: "resting_heart_rate", icon: "heart", color: "#FF453A", digits: 0 },
+      { key: "walking_heart_rate", suffix: "walking_heart_rate_average", icon: "heart", color: "#FF6482", digits: 0 },
+      { key: "hrv", suffix: "heart_rate_variability", icon: "waveform", color: "#BF5AF2", digits: 1 },
+      { key: "spo2", suffix: "blood_oxygen", icon: "lungs", color: "#64D2FF", digits: 0 },
+      { key: "respiratory_rate", suffix: "respiratory_rate", icon: "wind", color: "#40C8E0", digits: 0 },
     ],
   },
   {
-    title: "Corpo",
+    id: "body",
     metrics: [
-      { key: "weight", label: "Peso", suffix: "weight", icon: "scale", color: "#AF8E6B", digits: 1, body: true },
-      { key: "body_fat", label: "Massa grassa", suffix: "body_fat_percentage", icon: "percent", color: "#C77F3E", digits: 1, body: true },
-      { key: "lean_mass", label: "Massa magra", suffix: "lean_body_mass", icon: "scale", color: "#8E8E93", digits: 1, body: true },
-      { key: "water", label: "Acqua", suffix: "water", icon: "drop", color: "#0A84FF", digits: 0 },
+      { key: "weight", suffix: "weight", icon: "scale", color: "#AF8E6B", digits: 1, body: true },
+      { key: "body_fat", suffix: "body_fat_percentage", icon: "percent", color: "#C77F3E", digits: 1, body: true },
+      { key: "lean_mass", suffix: "lean_body_mass", icon: "scale", color: "#8E8E93", digits: 1, body: true },
+      { key: "water", suffix: "water", icon: "drop", color: "#0A84FF", digits: 0 },
     ],
   },
 ];
@@ -85,21 +86,119 @@ const SECTIONS = [
 const SLEEP = {
   total: { key: "sleep", suffix: "sleep_duration" },
   stages: [
-    { key: "sleep_awake", label: "Sveglio", suffix: "awake", color: "#FF9F0A" },
-    { key: "sleep_rem", label: "REM", suffix: "rem_sleep", color: "#64D2FF" },
-    { key: "sleep_core", label: "Core", suffix: "core_sleep", color: "#0A84FF" },
-    { key: "sleep_deep", label: "Profondo", suffix: "deep_sleep", color: "#5E5CE6" },
+    { key: "sleep_awake", suffix: "awake", color: "#FF9F0A" },
+    { key: "sleep_rem", suffix: "rem_sleep", color: "#64D2FF" },
+    { key: "sleep_core", suffix: "core_sleep", color: "#0A84FF" },
+    { key: "sleep_deep", suffix: "deep_sleep", color: "#5E5CE6" },
   ],
 };
 
 /** Metriche per cui si può indicare un sensore "media 7 giorni". */
 const AVERAGE_KEYS = ["sleep", "resting_heart_rate", "hrv"];
 
-const UNIT_LABELS = {
-  steps: "passi",
-  floors: "piani",
-  "br/min": "atti/min",
+/** Unità inviate da Companion → chiave nelle tabelle lingua. */
+const UNIT_KEYS = { steps: "steps", floors: "floors", "br/min": "brmin" };
+
+/* ------------------------------------------------------------------ */
+/* Lingue. Per aggiungerne una: copia il blocco "en", traduci i testi  */
+/* e aggiungila qui sotto (il resto della card non cambia).            */
+/* ------------------------------------------------------------------ */
+
+const I18N = {
+  it: {
+    title: "Salute",
+    labels: {
+      active_energy: "Movimento", exercise: "Esercizio", steps: "Passi",
+      distance: "Distanza a piedi", flights: "Piani saliti", resting_energy: "Energia a riposo", vo2max: "VO2 max",
+      heart_rate: "Frequenza cardiaca", resting_heart_rate: "FC a riposo", walking_heart_rate: "FC camminando",
+      hrv: "Variabilità (HRV)", spo2: "Ossigeno nel sangue", respiratory_rate: "Freq. respiratoria",
+      weight: "Peso", body_fat: "Massa grassa", lean_mass: "Massa magra", water: "Acqua",
+      sleep_awake: "Sveglio", sleep_rem: "REM", sleep_core: "Core", sleep_deep: "Profondo",
+    },
+    sections: { activity: "Attività", heart: "Cuore e respirazione", body: "Corpo", sleep: "Sonno" },
+    lastNight: "Ultima notte",
+    noData: "nessun dato",
+    goal: "{pct}% di {goal}",
+    units: { steps: "passi", floors: "piani", brmin: "atti/min" },
+    age: { now: "adesso", min: "{n} min fa", hours: "{n} h fa", yesterday: "ieri", days: "{n} giorni fa" },
+    delta: {
+      same: "In linea con la media 7 gg",
+      diff: "{sign}{amount} vs media 7 gg",
+      title: "Media 7 giorni: {avg}",
+    },
+    empty: {
+      title: "Nessun dato salute trovato",
+      body: "Controlla il prefisso (<code>{prefix}</code>): i sensori devono chiamarsi <code>sensor.&lt;prefisso&gt;_heart_rate</code> e simili. In alternativa indica le entità con <code>entities:</code>.",
+    },
+    editor: {
+      title: "Titolo", prefix: "Prefisso sensori (es. iphone)", kcal: "Obiettivo calorie attive (kcal)",
+      min: "Obiettivo esercizio (min)", steps: "Obiettivo passi", stale: 'Dato "vecchio" dopo (ore)',
+      language: "Lingua", auto: "Automatica (come Home Assistant)",
+      note: "Per indicare entità diverse usa <code>entities:</code> nell'editor YAML.",
+    },
+  },
+  en: {
+    title: "Health",
+    labels: {
+      active_energy: "Move", exercise: "Exercise", steps: "Steps",
+      distance: "Walk + run distance", flights: "Flights climbed", resting_energy: "Resting energy", vo2max: "VO2 max",
+      heart_rate: "Heart rate", resting_heart_rate: "Resting heart rate", walking_heart_rate: "Walking heart rate",
+      hrv: "Heart rate variability", spo2: "Blood oxygen", respiratory_rate: "Respiratory rate",
+      weight: "Weight", body_fat: "Body fat", lean_mass: "Lean body mass", water: "Water",
+      sleep_awake: "Awake", sleep_rem: "REM", sleep_core: "Core", sleep_deep: "Deep",
+    },
+    sections: { activity: "Activity", heart: "Heart and breathing", body: "Body", sleep: "Sleep" },
+    lastNight: "Last night",
+    noData: "no data",
+    goal: "{pct}% of {goal}",
+    units: { steps: "steps", floors: "floors", brmin: "br/min" },
+    age: { now: "now", min: "{n} min ago", hours: "{n} h ago", yesterday: "yesterday", days: "{n} days ago" },
+    delta: {
+      same: "In line with 7-day avg",
+      diff: "{sign}{amount} vs 7-day avg",
+      title: "7-day average: {avg}",
+    },
+    empty: {
+      title: "No health data found",
+      body: "Check the prefix (<code>{prefix}</code>): the sensors must be named <code>sensor.&lt;prefix&gt;_heart_rate</code> and so on. Or set the entities one by one with <code>entities:</code>.",
+    },
+    editor: {
+      title: "Title", prefix: "Sensor prefix (e.g. iphone)", kcal: "Active energy goal (kcal)",
+      min: "Exercise goal (min)", steps: "Steps goal", stale: "Mark data as old after (hours)",
+      language: "Language", auto: "Automatic (same as Home Assistant)",
+      note: "To use different entities, set <code>entities:</code> in the YAML editor.",
+    },
+  },
 };
+
+/** Lingua e locale in uso durante il disegno (impostati da _applyLanguage). */
+let I = I18N.it;
+let LOCALE = "it";
+
+function rawLanguage(config, hass) {
+  const pref = String((config && config.language) || "auto").toLowerCase();
+  if (pref !== "auto") return pref;
+  return String((hass && (hass.language || (hass.locale && hass.locale.language))) || "en");
+}
+
+/** Lingua dei testi: quella di Home Assistant se tradotta, altrimenti inglese. */
+function resolveLanguage(config, hass) {
+  const base = rawLanguage(config, hass).toLowerCase().split(/[-_]/)[0];
+  return I18N[base] ? base : "en";
+}
+
+/** Locale per numeri e date (anche per lingue senza traduzione dei testi). */
+function resolveLocale(config, hass) {
+  const raw = rawLanguage(config, hass);
+  try {
+    return Intl.NumberFormat.supportedLocalesOf([raw]).length ? raw : "en";
+  } catch (e) {
+    return "en";
+  }
+}
+
+/** Sostituisce {nome} con i valori dati. */
+const f = (str, vars) => String(str).replace(/\{(\w+)\}/g, (_, k) => (k in vars ? vars[k] : ""));
 
 const GLYPHS = {
   flame: '<path d="M12 2s4 4.2 4 8a4 4 0 0 1-8 0c0-1.3.4-2.2.4-2.2S6 10 6 13.5A6 6 0 0 0 18 14c0-5-6-12-6-12z"/>',
@@ -135,7 +234,7 @@ function num(st) {
 
 function fmtNumber(value, digits) {
   if (!isFinite(value)) return "—";
-  return new Intl.NumberFormat("it-IT", {
+  return new Intl.NumberFormat(LOCALE, {
     minimumFractionDigits: 0,
     maximumFractionDigits: digits ?? (Math.abs(value) >= 100 ? 0 : 1),
   }).format(value);
@@ -151,7 +250,7 @@ function fmtMinutes(minutes) {
 
 function unitLabel(st) {
   const u = (st && st.attributes && st.attributes.unit_of_measurement) || "";
-  return UNIT_LABELS[u] ?? u;
+  return (UNIT_KEYS[u] && I.units[UNIT_KEYS[u]]) || u;
 }
 
 /** Istante dell'ultimo dato ricevuto (last_reported se disponibile). */
@@ -164,12 +263,12 @@ function lastSeen(st) {
 function fmtAge(date, now) {
   if (!date) return "";
   const min = Math.max(0, Math.round((now - date) / 60000));
-  if (min < 1) return "adesso";
-  if (min < 60) return `${min} min fa`;
+  if (min < 1) return I.age.now;
+  if (min < 60) return f(I.age.min, { n: min });
   const h = Math.floor(min / 60);
-  if (h < 24) return `${h} h fa`;
+  if (h < 24) return f(I.age.hours, { n: h });
   const d = Math.floor(h / 24);
-  return d === 1 ? "ieri" : `${d} giorni fa`;
+  return d === 1 ? I.age.yesterday : f(I.age.days, { n: d });
 }
 
 /* ------------------------------------------------------------------ */
@@ -196,13 +295,12 @@ class AppleHealthCard extends HTMLElement {
   }
 
   static getStubConfig() {
-    return { type: "custom:apple-health-card", title: "Salute", prefix: "" };
+    return { type: "custom:apple-health-card", prefix: "" };
   }
 
   setConfig(config) {
     if (!config) throw new Error("Configurazione mancante");
     this._config = {
-      title: "Salute",
       stale_hours: 12,
       hide_missing: true,
       ...config,
@@ -253,9 +351,15 @@ class AppleHealthCard extends HTMLElement {
         return st ? `${st.state}|${st.last_reported || st.last_updated}` : "-";
       })
       .join(";");
-    if (sig === this._signature) return;
-    this._signature = sig;
+    const full = `${hass.language || ""}|${sig}`;
+    if (full === this._signature) return;
+    this._signature = full;
     this._render();
+  }
+
+  _applyLanguage() {
+    I = I18N[resolveLanguage(this._config, this._hass)];
+    LOCALE = resolveLocale(this._config, this._hass);
   }
 
   connectedCallback() {
@@ -292,7 +396,7 @@ class AppleHealthCard extends HTMLElement {
     const seen = lastSeen(st);
     if (!seen || isMissing(st)) return "";
     const stale = this._isStale(st, metric);
-    return `<span class="age${stale ? " stale" : ""}" title="${esc(seen.toLocaleString("it-IT"))}">${
+    return `<span class="age${stale ? " stale" : ""}" title="${esc(seen.toLocaleString(LOCALE))}">${
       stale ? "⚠ " : ""
     }${esc(fmtAge(seen, Date.now()))}</span>`;
   }
@@ -317,14 +421,14 @@ class AppleHealthCard extends HTMLElement {
     const rounded = asMinutes ? Math.round(diff) : Number(diff.toFixed(digits ?? 0));
     const unit = asMinutes ? "" : unitLabel(st);
     const avgText = asMinutes ? fmtMinutes(avg) : `${fmtNumber(avg, digits)} ${unit}`.trim();
-    const title = `Media 7 giorni: ${avgText}`;
+    const title = f(I.delta.title, { avg: avgText });
     if (rounded === 0) {
-      return `<span class="delta" title="${esc(title)}">In linea con la media 7 gg</span>`;
+      return `<span class="delta" title="${esc(title)}">${esc(I.delta.same)}</span>`;
     }
     const sign = rounded > 0 ? "+" : "\u2212";
     const abs = Math.abs(rounded);
     const amount = asMinutes ? fmtMinutes(abs) : fmtNumber(abs, digits);
-    return `<span class="delta" title="${esc(title)}">${sign}${esc(amount)} vs media 7 gg</span>`;
+    return `<span class="delta" title="${esc(title)}">${esc(f(I.delta.diff, { sign, amount }))}</span>`;
   }
 
   _ring(ring) {
@@ -335,7 +439,9 @@ class AppleHealthCard extends HTMLElement {
     const pct = isFinite(value) ? Math.min(value / goal, 1) : 0;
     const r = 34;
     const c = 2 * Math.PI * r;
-    const goalText = isFinite(value) ? `${Math.round((value / goal) * 100)}% di ${fmtNumber(goal, 0)}` : "nessun dato";
+    const goalText = isFinite(value)
+      ? f(I.goal, { pct: Math.round((value / goal) * 100), goal: fmtNumber(goal, 0) })
+      : I.noData;
     return `
       <div class="ring" ${id && st ? `data-entity="${esc(id)}"` : ""}>
         <div class="ring-figure">
@@ -346,10 +452,10 @@ class AppleHealthCard extends HTMLElement {
           </svg>
           <div class="ring-center">
             <span class="ring-value">${esc(fmtNumber(value, 0))}</span>
-            <span class="ring-unit">${esc(ring.unit)}</span>
+            <span class="ring-unit">${esc(ring.key === "steps" ? I.units.steps : ring.unit)}</span>
           </div>
         </div>
-        <div class="ring-label">${esc(ring.label)}</div>
+        <div class="ring-label">${esc(I.labels[ring.key])}</div>
         <div class="ring-goal">${esc(goalText)}</div>
         ${this._ageHtml(st)}
       </div>`;
@@ -369,7 +475,7 @@ class AppleHealthCard extends HTMLElement {
           <span class="tile-icon" style="color:${metric.color};background:${metric.color}26">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${glyph}</svg>
           </span>
-          <span class="tile-label">${esc(metric.label)}</span>
+          <span class="tile-label">${esc(I.labels[metric.key])}</span>
         </div>
         <div class="tile-value">${esc(display)}<span class="tile-unit">${esc(unitLabel(st))}</span></div>
         ${this._deltaHtml(metric.key, value, metric.digits, false)}
@@ -391,7 +497,7 @@ class AppleHealthCard extends HTMLElement {
           .map(
             (s) =>
               `<span style="width:${((s.value / sum) * 100).toFixed(2)}%;background:${s.color}" title="${esc(
-                s.label,
+                I.labels[s.key],
               )}: ${esc(fmtMinutes(s.value))}"></span>`,
           )
           .join("")}</div>
@@ -400,7 +506,7 @@ class AppleHealthCard extends HTMLElement {
             (s) => `
           <div class="legend-item" data-entity="${esc(this._ids[s.key])}">
             <span class="dot" style="background:${s.color}"></span>
-            <span class="legend-label">${esc(s.label)}</span>
+            <span class="legend-label">${esc(I.labels[s.key])}</span>
             <span class="legend-value">${esc(fmtMinutes(s.value))}</span>
           </div>`,
           )
@@ -408,14 +514,14 @@ class AppleHealthCard extends HTMLElement {
       : "";
 
     return `
-      <div class="section-title">Sonno</div>
+      <div class="section-title">${esc(I.sections.sleep)}</div>
       <div class="panel sleep">
         <div class="sleep-head" data-entity="${esc(this._ids[SLEEP.total.key])}">
           <span class="tile-icon" style="color:#5E5CE6;background:#5E5CE626">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${GLYPHS.bed}</svg>
           </span>
           <div>
-            <div class="tile-label">Ultima notte</div>
+            <div class="tile-label">${esc(I.lastNight)}</div>
             <div class="tile-value">${esc(fmtMinutes(total))}</div>
             ${this._deltaHtml(SLEEP.total.key, total, 0, true)}
           </div>
@@ -427,11 +533,12 @@ class AppleHealthCard extends HTMLElement {
 
   _render() {
     if (!this._hass || !this._config || !this._ids) return;
+    this._applyLanguage();
 
     const sections = SECTIONS.map((section) => {
       const tiles = section.metrics.map((m) => this._tile(m)).join("");
       if (!tiles.trim()) return "";
-      return `<div class="section-title">${esc(section.title)}</div><div class="grid">${tiles}</div>`;
+      return `<div class="section-title">${esc(I.sections[section.id])}</div><div class="grid">${tiles}</div>`;
     });
 
     const anyData = Object.values(this._ids).some((id) => !isMissing(this._hass.states[id]));
@@ -444,10 +551,8 @@ class AppleHealthCard extends HTMLElement {
         ${this._sleep()}
         ${sections[2]}`
       : `<div class="empty">
-          <strong>Nessun dato salute trovato</strong>
-          <p>Controlla il prefisso (<code>${esc(this._config.prefix || "—")}</code>): i sensori devono chiamarsi
-          <code>sensor.&lt;prefisso&gt;_heart_rate</code> e simili. In alternativa indica le entità con
-          <code>entities:</code>.</p>
+          <strong>${esc(I.empty.title)}</strong>
+          <p>${f(I.empty.body, { prefix: esc(this._config.prefix || "—") })}</p>
         </div>`;
 
     this.shadowRoot.innerHTML = `
@@ -455,9 +560,9 @@ class AppleHealthCard extends HTMLElement {
       <ha-card>
         <div class="wrap">
           <div class="header">
-            <div class="title">${esc(this._config.title)}</div>
+            <div class="title">${esc(this._config.title || I.title)}</div>
             <div class="today">${esc(
-              new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" }),
+              new Date().toLocaleDateString(LOCALE, { weekday: "long", day: "numeric", month: "long" }),
             )}</div>
           </div>
           ${body}
@@ -556,6 +661,8 @@ class AppleHealthCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    // La lingua dell'interfaccia può arrivare dopo setConfig: ridisegna solo se cambia.
+    if (this._rendered && resolveLanguage(this._config, hass) !== this._lang) this._render();
   }
 
   _emit(config) {
@@ -569,25 +676,36 @@ class AppleHealthCardEditor extends HTMLElement {
     this._rendered = true;
     const c = this._config;
     const g = c.goals || {};
+    this._lang = resolveLanguage(c, this._hass);
+    const T = I18N[this._lang];
+    const E = T.editor;
+    const lang = String(c.language || "auto").toLowerCase();
+    const sel = (v) => (lang === v ? " selected" : "");
     this.innerHTML = `
       <style>
         .row { display:flex; flex-direction:column; gap:4px; padding:8px 0; }
         label { font-size:12px; color:var(--secondary-text-color); }
-        input { padding:8px; border-radius:8px; border:1px solid var(--divider-color);
+        input, select { padding:8px; border-radius:8px; border:1px solid var(--divider-color);
           background:var(--card-background-color); color:var(--primary-text-color); }
         p { font-size:12px; color:var(--secondary-text-color); }
       </style>
-      <div class="row"><label>Titolo</label><input id="title" type="text" value="${esc(c.title || "Salute")}"></div>
-      <div class="row"><label>Prefisso sensori (es. iphone)</label><input id="prefix" type="text" value="${esc(c.prefix || "")}"></div>
-      <div class="row"><label>Obiettivo calorie attive (kcal)</label><input id="kcal" type="number" value="${esc(g.active_energy || 500)}"></div>
-      <div class="row"><label>Obiettivo esercizio (min)</label><input id="min" type="number" value="${esc(g.exercise || 30)}"></div>
-      <div class="row"><label>Obiettivo passi</label><input id="steps" type="number" value="${esc(g.steps || 10000)}"></div>
-      <div class="row"><label>Dato "vecchio" dopo (ore)</label><input id="stale" type="number" value="${esc(c.stale_hours || 12)}"></div>
-      <p>Per indicare entità diverse usa <code>entities:</code> nell'editor YAML.</p>`;
+      <div class="row"><label>${esc(E.title)}</label><input id="title" type="text" value="${esc(c.title || T.title)}"></div>
+      <div class="row"><label>${esc(E.prefix)}</label><input id="prefix" type="text" value="${esc(c.prefix || "")}"></div>
+      <div class="row"><label>${esc(E.kcal)}</label><input id="kcal" type="number" value="${esc(g.active_energy || 500)}"></div>
+      <div class="row"><label>${esc(E.min)}</label><input id="min" type="number" value="${esc(g.exercise || 30)}"></div>
+      <div class="row"><label>${esc(E.steps)}</label><input id="steps" type="number" value="${esc(g.steps || 10000)}"></div>
+      <div class="row"><label>${esc(E.stale)}</label><input id="stale" type="number" value="${esc(c.stale_hours || 12)}"></div>
+      <div class="row"><label>${esc(E.language)}</label>
+        <select id="lang">
+          <option value="auto"${sel("auto")}>${esc(E.auto)}</option>
+          <option value="it"${sel("it")}>Italiano</option>
+          <option value="en"${sel("en")}>English</option>
+        </select></div>
+      <p>${E.note}</p>`;
 
     const val = (id) => this.querySelector(id).value;
-    const update = () =>
-      this._emit({
+    const update = () => {
+      const config = {
         ...this._config,
         type: "custom:apple-health-card",
         title: val("#title"),
@@ -599,8 +717,14 @@ class AppleHealthCardEditor extends HTMLElement {
           exercise: Number(val("#min")) || 30,
           steps: Number(val("#steps")) || 10000,
         },
-      });
-    this.querySelectorAll("input").forEach((i) => i.addEventListener("change", update));
+      };
+      const chosen = val("#lang");
+      if (chosen === "auto") delete config.language;
+      else config.language = chosen;
+      this._emit(config);
+      if (resolveLanguage(config, this._hass) !== this._lang) this._render();
+    };
+    this.querySelectorAll("input, select").forEach((i) => i.addEventListener("change", update));
   }
 }
 

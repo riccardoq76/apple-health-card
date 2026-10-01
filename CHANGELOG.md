@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- English translation. The card now follows the language of Home Assistant (`language: auto`): Italian and English are included, any other language falls back to English. New `language` option (also in the visual editor) to force `it` or `en`. Numbers and dates use the format of that language.
+- The default title is now translated ("Salute" / "Health") unless you set `title:`. If your Home Assistant is in English and you want to keep Italian, add `language: it`.
 - Tiles: the "x min ago" label is now anchored to the bottom of each tile, so it lines up across a row even when some tiles show the 7-day comparison line and others do not.
 
 ## 2.1.0 — 2026-10-01
