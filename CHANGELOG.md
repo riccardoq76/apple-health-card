@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.1.0 — 2026-10-01
+
+- New optional `averages` option: shows the difference from a 7-day average under sleep, resting heart rate and HRV. The averages come from Home Assistant Statistics helpers (see README).
+- New `min_coverage` option (default 0.5): the difference is hidden while the average covers too few days.
+- The card also re-renders when one of the average sensors changes.
+- Without `averages` nothing changes.
+
 ## 2.0.1 — 2026-09-29
 
 - Sleep legend on wide screens: each value now sits next to its label instead of being pushed to the far right. Phone layout unchanged.

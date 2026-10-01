@@ -26,6 +26,7 @@ A Home Assistant Lovelace card with an Apple Health–style layout, built for th
 - **Heart and breathing**: heart rate, resting heart rate, walking heart rate average, HRV, blood oxygen, respiratory rate.
 - **Sleep**: last night's total with a stage bar (awake, REM, core, deep).
 - **Body**: weight, body fat, lean body mass, water.
+- **Comparison with your 7-day average** (optional): under sleep, resting heart rate and HRV, a line like "−6 vs 7-day avg". See [7-day average](#7-day-average-optional).
 
 Every tile shows **how old its value is** ("12 min ago", "yesterday"). Health data does not stream live: it reaches Home Assistant only when the iPhone syncs, so a "current" heart rate can be hours or days old. Values older than `stale_hours` are marked with ⚠ and dimmed. Body metrics (weight, body fat, lean mass, VO2 max) are never marked, since they change rarely.
 
@@ -75,6 +76,8 @@ All options:
 | `goals` | see below | Ring goals: `active_energy` (500 kcal), `exercise` (30 min), `steps` (10000). |
 | `stale_hours` | `12` | After how many hours a value is marked as old. |
 | `hide_missing` | `true` | Hide tiles whose sensor is missing or unavailable. |
+| `averages` | — | Map of metric → 7-day average sensor. Supported metrics: `sleep`, `resting_heart_rate`, `hrv`. |
+| `min_coverage` | `0.5` | Minimum share of the 7 days the average must cover (0 to 1). Below it, the difference is hidden. |
 
 Full example:
 
@@ -117,6 +120,30 @@ entities:
 | `sleep_rem` | `rem_sleep` |
 | `sleep_core` | `core_sleep` |
 | `sleep_deep` | `deep_sleep` |
+
+## 7-day average (optional)
+
+The card can show how today's value compares with your recent average, for sleep, resting heart rate and HRV. It does not calculate the average itself: you create one **Statistics** helper per metric in Home Assistant, then point the card at it.
+
+1. Settings → Devices & services → Helpers → **Create helper** → **Statistics**.
+2. Source entity: for example `sensor.iphone_sleep_duration`. Statistic characteristic: **Arithmetic mean**. Maximum age: **7 days**. Sampling size: 100 (or more).
+3. Repeat for `resting_heart_rate` and `heart_rate_variability`.
+4. Add the new sensors to the card:
+
+```yaml
+type: custom:apple-health-card
+prefix: iphone
+averages:
+  sleep: sensor.sleep_7_day_average
+  resting_heart_rate: sensor.resting_hr_7_day_average
+  hrv: sensor.hrv_7_day_average
+```
+
+Things to know:
+- The difference is only a sign and a size ("+3", "−18 min"). The card does not say whether it is good or bad, and it is not medical advice.
+- The average is calculated over the values Home Assistant recorded in the last 7 days, and it includes today's value. It is an approximation, not the figure Apple Health would show.
+- A new helper reads the recorder history, so it starts with whatever the recorder still has. The card hides the difference while the average covers less than `min_coverage` of the 7 days (it reads the `age_coverage_ratio` attribute of the helper).
+- If a metric is not in `averages`, nothing changes for that tile.
 
 ## Trend charts
 

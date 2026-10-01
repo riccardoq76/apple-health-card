@@ -28,9 +28,14 @@
  *   goals:        obiettivi anelli { steps, active_energy, exercise }
  *   stale_hours:  dopo quante ore un dato è "vecchio" (default 12)
  *   hide_missing: nasconde i riquadri senza dato (default true)
+ *   averages:     mappa metrica → sensore "media 7 giorni" (opzionale).
+ *                 Metriche supportate: sleep, resting_heart_rate, hrv.
+ *                 Mostra la differenza rispetto alla media sotto il valore.
+ *   min_coverage: copertura minima della media, da 0 a 1 (default 0.5).
+ *                 Sotto questa soglia la differenza non viene mostrata.
  */
 
-const VERSION = "2.0.1";
+const VERSION = "2.1.0";
 
 /* ------------------------------------------------------------------ */
 /* Definizione metriche                                                */
@@ -86,6 +91,9 @@ const SLEEP = {
     { key: "sleep_deep", label: "Profondo", suffix: "deep_sleep", color: "#5E5CE6" },
   ],
 };
+
+/** Metriche per cui si può indicare un sensore "media 7 giorni". */
+const AVERAGE_KEYS = ["sleep", "resting_heart_rate", "hrv"];
 
 const UNIT_LABELS = {
   steps: "passi",
@@ -200,6 +208,7 @@ class AppleHealthCard extends HTMLElement {
       ...config,
     };
     this._ids = this._buildEntityMap();
+    this._avgIds = this._buildAverageMap();
     this._signature = null;
     if (this._hass) this._render();
   }
@@ -222,10 +231,22 @@ class AppleHealthCard extends HTMLElement {
     return map;
   }
 
+  /** Mappa metrica → sensore media. Solo le metriche supportate. */
+  _buildAverageMap() {
+    const raw = this._config.averages;
+    const map = {};
+    if (!raw || typeof raw !== "object") return map;
+    for (const key of AVERAGE_KEYS) {
+      const id = raw[key];
+      if (typeof id === "string" && id.trim()) map[key] = id.trim();
+    }
+    return map;
+  }
+
   set hass(hass) {
     this._hass = hass;
     // Ridisegna solo se è cambiato qualcosa nei sensori usati dalla card.
-    const ids = Object.values(this._ids || {});
+    const ids = [...Object.values(this._ids || {}), ...Object.values(this._avgIds || {})];
     const sig = ids
       .map((id) => {
         const st = hass.states[id];
@@ -276,6 +297,36 @@ class AppleHealthCard extends HTMLElement {
     }${esc(fmtAge(seen, Date.now()))}</span>`;
   }
 
+  /**
+   * Differenza tra il valore attuale e la media a 7 giorni.
+   * Restituisce "" se la media non è configurata, non è disponibile
+   * o copre troppo pochi giorni (attributo age_coverage_ratio).
+   * Nessun giudizio "meglio/peggio": solo segno e scarto.
+   */
+  _deltaHtml(key, value, digits, asMinutes) {
+    const id = this._avgIds && this._avgIds[key];
+    if (!id || !isFinite(value)) return "";
+    const st = this._hass.states[id];
+    const avg = num(st);
+    if (!isFinite(avg)) return "";
+    const coverage = Number(st.attributes && st.attributes.age_coverage_ratio);
+    const minCoverage = Number.isFinite(Number(this._config.min_coverage)) ? Number(this._config.min_coverage) : 0.5;
+    if (isFinite(coverage) && coverage < minCoverage) return "";
+
+    const diff = value - avg;
+    const rounded = asMinutes ? Math.round(diff) : Number(diff.toFixed(digits ?? 0));
+    const unit = asMinutes ? "" : unitLabel(st);
+    const avgText = asMinutes ? fmtMinutes(avg) : `${fmtNumber(avg, digits)} ${unit}`.trim();
+    const title = `Media 7 giorni: ${avgText}`;
+    if (rounded === 0) {
+      return `<span class="delta" title="${esc(title)}">In linea con la media 7 gg</span>`;
+    }
+    const sign = rounded > 0 ? "+" : "\u2212";
+    const abs = Math.abs(rounded);
+    const amount = asMinutes ? fmtMinutes(abs) : fmtNumber(abs, digits);
+    return `<span class="delta" title="${esc(title)}">${sign}${esc(amount)} vs media 7 gg</span>`;
+  }
+
   _ring(ring) {
     const st = this._st(ring.key);
     const id = this._ids[ring.key];
@@ -321,6 +372,7 @@ class AppleHealthCard extends HTMLElement {
           <span class="tile-label">${esc(metric.label)}</span>
         </div>
         <div class="tile-value">${esc(display)}<span class="tile-unit">${esc(unitLabel(st))}</span></div>
+        ${this._deltaHtml(metric.key, value, metric.digits, false)}
         ${this._ageHtml(st, metric)}
       </button>`;
   }
@@ -365,6 +417,7 @@ class AppleHealthCard extends HTMLElement {
           <div>
             <div class="tile-label">Ultima notte</div>
             <div class="tile-value">${esc(fmtMinutes(total))}</div>
+            ${this._deltaHtml(SLEEP.total.key, total, 0, true)}
           </div>
           <div class="sleep-age">${this._ageHtml(totalSt)}</div>
         </div>
@@ -455,6 +508,7 @@ const STYLE = `
   .tile-label { font-size:12px; font-weight:600; color:var(--ahc-muted); }
   .tile-value { font-size:24px; font-weight:700; letter-spacing:-.6px; }
   .tile-unit { font-size:12px; font-weight:600; color:var(--ahc-muted); margin-left:4px; }
+  .delta { display:block; font-size:11px; font-weight:600; color:var(--ahc-muted); }
   .age { display:block; font-size:11px; color:var(--ahc-muted); margin-top:2px; }
   .age.stale { color: var(--warning-color, #FF9F0A); font-weight:600; }
   .sleep { padding:14px; display:flex; flex-direction:column; gap:12px; }
