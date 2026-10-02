@@ -174,9 +174,9 @@ const I18N = {
     labels: {
       active_energy: "Bewegen", exercise: "Trainieren", steps: "Schritte",
       distance: "Gehen + Laufen", flights: "Etagen gestiegen", resting_energy: "Ruheenergie", vo2max: "VO2 max",
-      heart_rate: "Herzfrequenz", resting_heart_rate: "Ruheherzfrequenz", walking_heart_rate: "Herzfrequenz beim Gehen",
+      heart_rate: "Herzfrequenz", resting_heart_rate: "Ruheherzfrequenz", walking_heart_rate: "Ø-Herzfrequenz (Gehen)",
       hrv: "Herzfrequenz­variabilität", spo2: "Blutsauerstoff", respiratory_rate: "Atemfrequenz",
-      weight: "Gewicht", body_fat: "Körperfett", lean_mass: "Fettfreie Körpermasse", water: "Wasser",
+      weight: "Gewicht", body_fat: "Körperfettanteil", lean_mass: "Magere Körpermasse", water: "Wasser",
       sleep_awake: "Wach", sleep_rem: "REM", sleep_core: "Kern", sleep_deep: "Tief",
     },
     sections: { activity: "Aktivität", heart: "Herz und Atmung", body: "Körper", sleep: "Schlaf" },
