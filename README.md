@@ -28,7 +28,7 @@ A Home Assistant Lovelace card with an Apple Health–style layout, built for th
 - **Body**: weight, body fat, lean body mass, water.
 - **Comparison with your 7-day average** (optional): under sleep, resting heart rate and HRV, a line like "−6 vs 7-day avg". See [7-day average](#7-day-average-optional).
 
-Every tile shows **how old its value is** ("12 min ago", "yesterday"). Health data does not stream live: it reaches Home Assistant only when the iPhone syncs, so a "current" heart rate can be hours or days old. Values older than `stale_hours` are marked with ⚠ and dimmed. Body metrics (weight, body fat, lean mass, VO2 max) are never marked, since they change rarely.
+Every tile shows **how old its value is** ("12 min ago", "yesterday"). Health data does not stream live: it reaches Home Assistant only when the iPhone syncs, so a "current" heart rate can be hours or days old. Values older than `stale_hours` are marked with ⚠ and dimmed. Body metrics (weight, body fat, lean mass, VO2 max) are never marked, since they change rarely. For these, the age is measured from the last time the *value changed*, not from the last time the app sent it: the Companion app can send the same weight again and again, which would otherwise look like a fresh measurement. (If Home Assistant restarts, the age restarts from the first update after the restart.)
 
 Tiles whose sensor is missing or `unavailable` are hidden. Tapping a tile opens Home Assistant's standard history dialog.
 
@@ -51,7 +51,7 @@ Tiles whose sensor is missing or `unavailable` are hidden. Tapping a tile opens 
 
 1. Copy `dist/apple-health-card.js` to `/config/www/apple-health-card.js`.
 2. Settings → Dashboards → three dots → **Resources** → Add resource:
-   URL `/local/apple-health-card.js?v=2.2.0`, type **JavaScript module**.
+   URL `/local/apple-health-card.js?v=2.3.0`, type **JavaScript module**.
    Change the `?v=` number every time you replace the file, otherwise phones keep the cached copy.
 3. Reload the browser.
 
@@ -74,10 +74,12 @@ All options:
 | `title` | `Health` / `Salute` | Card title. The default depends on the language. |
 | `entities` | — | Map of metric → entity_id. Overrides the prefix for that metric. |
 | `goals` | see below | Ring goals: `active_energy` (500 kcal), `exercise` (30 min), `steps` (10000). |
+| `goals.sleep` | — | Optional sleep goal in hours (e.g. `7.5`). If set, last night's sleep shows a percentage of the goal. No default. |
 | `stale_hours` | `12` | After how many hours a value is marked as old. |
 | `hide_missing` | `true` | Hide tiles whose sensor is missing or unavailable. |
 | `language` | `auto` | `auto` follows Home Assistant. Use `en` or `it` to force a language. |
 | `averages` | — | Map of metric → 7-day average sensor. Supported metrics: `sleep`, `resting_heart_rate`, `hrv`. |
+| `hide` | — | List of metrics to hide, e.g. `[water, lean_mass]`. Works for tiles, rings (`steps`, `exercise`, `active_energy`) and the sleep block (`sleep`). |
 | `min_coverage` | `0.5` | Minimum share of the 7 days the average must cover (0 to 1). Below it, the difference is hidden. |
 
 Full example:

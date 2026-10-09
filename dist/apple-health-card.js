@@ -34,9 +34,14 @@
  *                 Mostra la differenza rispetto alla media sotto il valore.
  *   min_coverage: copertura minima della media, da 0 a 1 (default 0.5).
  *                 Sotto questa soglia la differenza non viene mostrata.
+ *   hide:         lista di metriche da nascondere, es. [water, lean_mass].
+ *                 Vale anche per anelli (steps, exercise, active_energy)
+ *                 e per il sonno (sleep).
+ *   goals.sleep:  obiettivo di sonno in ore (opzionale, nessun default).
+ *                 Se impostato, mostra "% dell'obiettivo" sotto il sonno.
  */
 
-const VERSION = "2.2.0";
+const VERSION = "2.3.0";
 
 /* ------------------------------------------------------------------ */
 /* Definizione metriche                                                */
@@ -253,9 +258,16 @@ function unitLabel(st) {
   return (UNIT_KEYS[u] && I.units[UNIT_KEYS[u]]) || u;
 }
 
-/** Istante dell'ultimo dato ricevuto (last_reported se disponibile). */
-function lastSeen(st) {
-  const t = st && (st.last_reported || st.last_updated || st.last_changed);
+/**
+ * Istante dell'ultimo dato ricevuto (last_reported se disponibile).
+ * Con changed=true usa invece last_changed: serve per le metriche che
+ * cambiano di rado (peso ecc.), dove l'app può rimandare lo stesso valore
+ * più volte e last_reported darebbe un'età ingannevolmente recente.
+ */
+function lastSeen(st, changed) {
+  const t = st && (changed
+    ? (st.last_changed || st.last_updated || st.last_reported)
+    : (st.last_reported || st.last_updated || st.last_changed));
   const d = t ? new Date(t) : null;
   return d && !isNaN(d) ? d : null;
 }
@@ -385,6 +397,11 @@ class AppleHealthCard extends HTMLElement {
     return id ? this._hass.states[id] : undefined;
   }
 
+  _isHidden(key) {
+    const h = this._config.hide;
+    return Array.isArray(h) && h.includes(key);
+  }
+
   _isStale(st, metric) {
     if (metric && metric.body) return false;
     const seen = lastSeen(st);
@@ -393,7 +410,7 @@ class AppleHealthCard extends HTMLElement {
   }
 
   _ageHtml(st, metric) {
-    const seen = lastSeen(st);
+    const seen = lastSeen(st, !!(metric && metric.body));
     if (!seen || isMissing(st)) return "";
     const stale = this._isStale(st, metric);
     return `<span class="age${stale ? " stale" : ""}" title="${esc(seen.toLocaleString(LOCALE))}">${
@@ -462,6 +479,7 @@ class AppleHealthCard extends HTMLElement {
   }
 
   _tile(metric) {
+    if (this._isHidden(metric.key)) return "";
     const id = this._ids[metric.key];
     const st = this._st(metric.key);
     if (!st && this._config.hide_missing) return "";
@@ -483,7 +501,17 @@ class AppleHealthCard extends HTMLElement {
       </button>`;
   }
 
+  /** "86% di 7 h" se goals.sleep (ore) è impostato, altrimenti "". */
+  _sleepGoalHtml(totalMinutes) {
+    const goalH = Number((this._config.goals || {}).sleep);
+    if (!(goalH > 0) || !isFinite(totalMinutes)) return "";
+    const goalText = `${fmtNumber(goalH, 1)} h`;
+    const pct = Math.round((totalMinutes / (goalH * 60)) * 100);
+    return `<span class="delta">${esc(f(I.goal, { pct, goal: goalText }))}</span>`;
+  }
+
   _sleep() {
+    if (this._isHidden("sleep")) return "";
     const totalSt = this._st(SLEEP.total.key);
     const stages = SLEEP.stages
       .map((s) => ({ ...s, st: this._st(s.key), value: num(this._st(s.key)) }))
@@ -523,6 +551,7 @@ class AppleHealthCard extends HTMLElement {
           <div>
             <div class="tile-label">${esc(I.lastNight)}</div>
             <div class="tile-value">${esc(fmtMinutes(total))}</div>
+            ${this._sleepGoalHtml(total)}
             ${this._deltaHtml(SLEEP.total.key, total, 0, true)}
           </div>
           <div class="sleep-age">${this._ageHtml(totalSt)}</div>
@@ -541,11 +570,18 @@ class AppleHealthCard extends HTMLElement {
       return `<div class="section-title">${esc(I.sections[section.id])}</div><div class="grid">${tiles}</div>`;
     });
 
+    const shownRings = RINGS.filter((r) => !this._isHidden(r.key));
+    const rings = shownRings.length
+      ? `<div class="rings" style="grid-template-columns:repeat(${shownRings.length},1fr)">${shownRings
+          .map((r) => this._ring(r))
+          .join("")}</div>`
+      : "";
+
     const anyData = Object.values(this._ids).some((id) => !isMissing(this._hass.states[id]));
 
     const body = anyData
       ? `
-        <div class="rings">${RINGS.map((r) => this._ring(r)).join("")}</div>
+        ${rings}
         ${sections[0]}
         ${sections[1]}
         ${this._sleep()}

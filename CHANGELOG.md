@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.3.0 — 2026-10-09
+
+- Weight, body fat, lean mass, water and VO2 max: the "x ago" label now counts from the last time the value *changed*. The Companion app can resend the same value several times, which made an old weighing look new. After a Home Assistant restart the label restarts from the first update.
+- New `hide` option: list of metrics to hide (`[water, lean_mass]`, also `steps`, `exercise`, `active_energy` for the rings and `sleep` for the sleep block). The rings resize when some are hidden.
+- New optional `goals.sleep` (hours): shows last night's sleep as a percentage of the goal. Nothing is shown unless you set it.
+- Without the new options only the weight age label changes.
+
 ## 2.2.0 — 2026-10-01
 
 - English translation. The card now follows the language of Home Assistant (`language: auto`): Italian and English are included, any other language falls back to English. New `language` option (also in the visual editor) to force `it` or `en`. Numbers and dates use the format of that language.
