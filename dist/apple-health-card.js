@@ -39,9 +39,14 @@
  *                 e per il sonno (sleep).
  *   goals.sleep:  obiettivo di sonno in ore (opzionale, nessun default).
  *                 Se impostato, mostra "% dell'obiettivo" sotto il sonno.
+ *   sparklines:   true oppure lista di metriche (es. [sleep, hrv, weight]).
+ *                 Mostra un mini-grafico degli ultimi 7 giorni nel riquadro.
+ *                 Con true: sleep, resting_heart_rate, hrv, weight.
+ *                 Legge la cronologia di Home Assistant (nessun'altra richiesta).
+ *   language:     ora anche "es" e "de".
  */
 
-const VERSION = "2.3.0";
+const VERSION = "2.4.0";
 
 /* ------------------------------------------------------------------ */
 /* Definizione metriche                                                */
@@ -99,7 +104,25 @@ const SLEEP = {
 };
 
 /** Metriche per cui si può indicare un sensore "media 7 giorni". */
-const AVERAGE_KEYS = ["sleep", "resting_heart_rate", "hrv"];
+const AVERAGE_KEYS = ["sleep", "resting_heart_rate", "hrv", "walking_heart_rate", "respiratory_rate", "spo2"];
+
+/**
+ * Mini-grafici (opzionali): come riassumere i valori di ciascun giorno.
+ * last = ultimo valore del giorno, avg = media, max = massimo (contatori
+ * giornalieri che ripartono da zero). Si usa la cronologia grezza, non le
+ * statistiche: i dati Salute arrivano a pacchetti e le statistiche
+ * ripeterebbero il valore precedente nei giorni senza sincronizzazione.
+ */
+const SPARK_AGG = {
+  sleep: "last", resting_heart_rate: "avg", hrv: "avg", walking_heart_rate: "avg", heart_rate: "avg",
+  respiratory_rate: "avg", spo2: "avg", weight: "last", body_fat: "last", lean_mass: "last", vo2max: "last",
+  water: "last", distance: "max", flights: "max", resting_energy: "max",
+};
+/** Metriche che cambiano di rado: la linea unisce i punti anche attraverso i giorni vuoti. */
+const SPARK_CONNECT = ["weight", "body_fat", "lean_mass", "vo2max"];
+const SPARK_DEFAULT = ["sleep", "resting_heart_rate", "hrv", "weight"];
+const SPARK_DAYS = 7;
+const SPARK_REFRESH_MS = 10 * 60 * 1000;
 
 /** Unità inviate da Companion → chiave nelle tabelle lingua. */
 const UNIT_KEYS = { steps: "steps", floors: "floors", "br/min": "brmin" };
@@ -125,6 +148,7 @@ const I18N = {
     noData: "nessun dato",
     goal: "{pct}% di {goal}",
     units: { steps: "passi", floors: "piani", brmin: "atti/min" },
+    spark: "Ultimi 7 giorni",
     age: { now: "adesso", min: "{n} min fa", hours: "{n} h fa", yesterday: "ieri", days: "{n} giorni fa" },
     delta: {
       same: "In linea con la media 7 gg",
@@ -157,6 +181,7 @@ const I18N = {
     noData: "no data",
     goal: "{pct}% of {goal}",
     units: { steps: "steps", floors: "floors", brmin: "br/min" },
+    spark: "Last 7 days",
     age: { now: "now", min: "{n} min ago", hours: "{n} h ago", yesterday: "yesterday", days: "{n} days ago" },
     delta: {
       same: "In line with 7-day avg",
@@ -189,6 +214,7 @@ const I18N = {
     noData: "sin datos",
     goal: "{pct}% de {goal}",
     units: { steps: "pasos", floors: "pisos", brmin: "resp/min" },
+    spark: "Últimos 7 días",
     age: { now: "ahora", min: "hace {n} min", hours: "hace {n} h", yesterday: "ayer", days: "hace {n} días" },
     delta: {
       same: "En línea con la media de 7 días",
@@ -221,6 +247,7 @@ const I18N = {
     noData: "keine Daten",
     goal: "{pct}% von {goal}",
     units: { steps: "Schritte", floors: "Etagen", brmin: "Atemzüge/min" },
+    spark: "Letzte 7 Tage",
     age: { now: "jetzt", min: "vor {n} Min.", hours: "vor {n} Std.", yesterday: "gestern", days: "vor {n} Tagen" },
     delta: {
       same: "Im 7-Tage-Schnitt",
@@ -347,6 +374,32 @@ function fmtAge(date, now) {
   return d === 1 ? I.age.yesterday : f(I.age.days, { n: d });
 }
 
+/**
+ * Riassume una cronologia grezza in un valore per giorno.
+ * rows: elementi nel formato compatto di Home Assistant (s = stato,
+ * lu = istante in secondi) o in quello esteso (state, last_updated).
+ * Restituisce un array lungo quanto `days`, con null dove manca il dato.
+ */
+function bucketDays(rows, days, agg) {
+  const out = days.map(() => []);
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const raw = r.s !== undefined ? r.s : r.state;
+    const v = Number(raw);
+    if (raw === null || raw === "" || !isFinite(v)) continue;
+    const t = r.lu !== undefined ? r.lu * 1000 : r.lc !== undefined ? r.lc * 1000 : Date.parse(r.last_updated || r.last_changed);
+    if (!isFinite(t) || t < days[0]) continue;
+    let i = days.length - 1;
+    while (i > 0 && t < days[i]) i--;
+    out[i].push(v);
+  }
+  return out.map((vs) => {
+    if (!vs.length) return null;
+    if (agg === "avg") return vs.reduce((a, b) => a + b, 0) / vs.length;
+    if (agg === "max") return Math.max(...vs);
+    return vs[vs.length - 1];
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* Card                                                                */
 /* ------------------------------------------------------------------ */
@@ -384,7 +437,9 @@ class AppleHealthCard extends HTMLElement {
     this._ids = this._buildEntityMap();
     this._avgIds = this._buildAverageMap();
     this._signature = null;
-    if (this._hass) this._render();
+    this._spark = null;
+    this._sparkAt = 0;
+    if (this._hass) { this._maybeLoadSparks(); this._render(); }
   }
 
   /** Mappa metrica → entity_id. Nessuna ricerca: solo prefisso o override. */
@@ -417,8 +472,77 @@ class AppleHealthCard extends HTMLElement {
     return map;
   }
 
+  /** Metriche con mini-grafico, secondo l'opzione `sparklines`. */
+  _sparkKeys() {
+    const sp = this._config.sparklines;
+    if (sp === true) return SPARK_DEFAULT;
+    if (Array.isArray(sp)) return sp.filter((k) => SPARK_AGG[k] && this._ids[k]);
+    return [];
+  }
+
+  /** Scarica (al massimo ogni 10 minuti) la cronologia degli ultimi giorni. */
+  _maybeLoadSparks() {
+    const keys = this._sparkKeys();
+    if (!keys.length || !this._hass || typeof this._hass.callWS !== "function") return;
+    if (this._sparkBusy || Date.now() - (this._sparkAt || 0) < SPARK_REFRESH_MS) return;
+    this._sparkBusy = true;
+    this._sparkAt = Date.now();
+    const days = [];
+    const now = new Date();
+    for (let i = SPARK_DAYS - 1; i >= 0; i--) days.push(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i).getTime());
+    const ids = keys.map((k) => this._ids[k]);
+    this._hass
+      .callWS({
+        type: "history/history_during_period",
+        start_time: new Date(days[0]).toISOString(),
+        end_time: new Date().toISOString(),
+        entity_ids: ids,
+        include_start_time_state: false,
+        significant_changes_only: false,
+        minimal_response: true,
+        no_attributes: true,
+      })
+      .then((res) => {
+        const out = {};
+        for (const k of keys) out[k] = bucketDays(res && res[this._ids[k]], days, SPARK_AGG[k]);
+        this._spark = out;
+        this._sparkBusy = false;
+        this._render();
+      })
+      .catch(() => {
+        // Se la cronologia non è disponibile, la card funziona senza mini-grafici.
+        this._sparkBusy = false;
+      });
+  }
+
+  _sparkHtml(key, color) {
+    const pts = this._spark && this._spark[key];
+    if (!pts || pts.filter((v) => v !== null).length < 2) return "";
+    const vals = pts.filter((v) => v !== null);
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const span = max - min || 1;
+    const W = 100, H = 28, pad = 3;
+    const x = (i) => (i / (pts.length - 1)) * W;
+    const y = (v) => H - pad - ((v - min) / span) * (H - 2 * pad);
+    let d = "", pen = false;
+    const dots = [];
+    pts.forEach((v, i) => {
+      if (v === null) { if (!SPARK_CONNECT.includes(key)) pen = false; return; }
+      d += `${pen ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)} `;
+      pen = true;
+      dots.push(`M${x(i).toFixed(1)} ${y(v).toFixed(1)}h0`);
+    });
+    const title = `${I.spark}: ${vals.map((v) => fmtNumber(v, key === "sleep" ? 0 : undefined)).join(" · ")}`;
+    return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(title)}">
+        <title>${esc(title)}</title>
+        <path d="${d.trim()}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity=".85"></path>
+        <path d="${dots.join("")}" fill="none" stroke="${color}" stroke-width="4.5" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+      </svg>`;
+  }
+
   set hass(hass) {
     this._hass = hass;
+    this._maybeLoadSparks();
     // Ridisegna solo se è cambiato qualcosa nei sensori usati dalla card.
     const ids = [...Object.values(this._ids || {}), ...Object.values(this._avgIds || {})];
     const sig = ids
@@ -561,6 +685,7 @@ class AppleHealthCard extends HTMLElement {
         </div>
         <div class="tile-value">${esc(display)}<span class="tile-unit">${esc(unitLabel(st))}</span></div>
         ${this._deltaHtml(metric.key, value, metric.digits, false)}
+        ${this._sparkKeys().includes(metric.key) ? this._sparkHtml(metric.key, metric.color) : ""}
         ${this._ageHtml(st, metric)}
       </button>`;
   }
@@ -620,6 +745,7 @@ class AppleHealthCard extends HTMLElement {
           </div>
           <div class="sleep-age">${this._ageHtml(totalSt)}</div>
         </div>
+        ${this._sparkKeys().includes(SLEEP.total.key) ? this._sparkHtml(SLEEP.total.key, "#5E5CE6") : ""}
         ${bar}
       </div>`;
   }
@@ -714,6 +840,7 @@ const STYLE = `
   .tile-value { font-size:24px; font-weight:700; letter-spacing:-.6px; }
   .tile-unit { font-size:12px; font-weight:600; color:var(--ahc-muted); margin-left:4px; }
   .delta { display:block; font-size:11px; font-weight:600; color:var(--ahc-muted); }
+  .spark { display:block; width:100%; height:28px; margin-top:2px; overflow:visible; }
   .age { display:block; font-size:11px; color:var(--ahc-muted); margin-top:2px; }
   .tile .age { margin-top:auto; }
   .age.stale { color: var(--warning-color, #FF9F0A); font-weight:600; }

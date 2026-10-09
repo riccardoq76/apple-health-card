@@ -51,7 +51,7 @@ Tiles whose sensor is missing or `unavailable` are hidden. Tapping a tile opens 
 
 1. Copy `dist/apple-health-card.js` to `/config/www/apple-health-card.js`.
 2. Settings → Dashboards → three dots → **Resources** → Add resource:
-   URL `/local/apple-health-card.js?v=2.3.0`, type **JavaScript module**.
+   URL `/local/apple-health-card.js?v=2.4.0`, type **JavaScript module**.
    Change the `?v=` number every time you replace the file, otherwise phones keep the cached copy.
 3. Reload the browser.
 
@@ -78,7 +78,8 @@ All options:
 | `stale_hours` | `12` | After how many hours a value is marked as old. |
 | `hide_missing` | `true` | Hide tiles whose sensor is missing or unavailable. |
 | `language` | `auto` | `auto` follows Home Assistant. Use `en`, `it`, `es` or `de` to force a language. |
-| `averages` | — | Map of metric → 7-day average sensor. Supported metrics: `sleep`, `resting_heart_rate`, `hrv`. |
+| `averages` | — | Map of metric → 7-day average sensor. Supported metrics: `sleep`, `resting_heart_rate`, `hrv`, `walking_heart_rate`, `respiratory_rate`, `spo2`. |
+| `sparklines` | — | `true` or a list of metrics (e.g. `[sleep, hrv, weight]`): shows a small chart of the last 7 days inside the tile. `true` means sleep, resting heart rate, HRV and weight. See [Mini charts](#mini-charts-optional). |
 | `hide` | — | List of metrics to hide, e.g. `[water, lean_mass]`. Works for tiles, rings (`steps`, `exercise`, `active_energy`) and the sleep block (`sleep`). |
 | `min_coverage` | `0.5` | Minimum share of the 7 days the average must cover (0 to 1). Below it, the difference is hidden. |
 
@@ -136,7 +137,7 @@ To add a language: in `dist/apple-health-card.js`, copy the `en` block inside `I
 
 ## 7-day average (optional)
 
-The card can show how today's value compares with your recent average, for sleep, resting heart rate and HRV. It does not calculate the average itself: you create one **Statistics** helper per metric in Home Assistant, then point the card at it.
+The card can show how today's value compares with your recent average, for sleep, resting heart rate, HRV, walking heart rate, respiratory rate and blood oxygen. It does not calculate the average itself: you create one **Statistics** helper per metric in Home Assistant, then point the card at it.
 
 1. Settings → Devices & services → Helpers → **Create helper** → **Statistics**.
 2. Source entity: for example `sensor.iphone_sleep_duration`. Statistic characteristic: **Arithmetic mean**. Maximum age: **7 days**. Sampling size: 100 (or more).
@@ -158,6 +159,30 @@ Things to know:
 - A new helper reads the recorder history, so it starts with whatever the recorder still has. The card hides the difference while the average covers less than `min_coverage` of the 7 days (it reads the `age_coverage_ratio` attribute of the helper).
 - If a metric is not in `averages`, nothing changes for that tile.
 
+### Which metrics can have an average
+
+Only values that describe a state of the body make sense: sleep, resting heart rate, HRV, walking heart rate, respiratory rate and blood oxygen. Steps and active energy are daily counters, so comparing today's value (still growing) with the average of past days would always look low in the morning. They are not supported on purpose.
+
+## Mini charts (optional)
+
+Set `sparklines: true` and the sleep, resting heart rate, HRV and weight tiles get a small chart of the last 7 days. Or choose the metrics yourself:
+
+```yaml
+type: custom:apple-health-card
+prefix: iphone
+sparklines: [sleep, resting_heart_rate, hrv, weight, vo2max]
+```
+
+Things to know:
+- Each point is one day: the last value for sleep and weight, the daily average for heart rate, HRV, respiratory rate and blood oxygen, the highest value for counters like distance. Days without data are left empty. For slow metrics (weight, body fat, lean mass, VO2 max) the line joins the points across empty days.
+- It uses the raw history of Home Assistant (not statistics, for the reason explained in [Trend charts](#trend-charts)), so it is limited by the recorder retention. 7 days fit the default 10.
+- The card asks Home Assistant for that history at most every 10 minutes. If the request fails, the tiles are shown without the chart.
+- Hover over a chart to see the values.
+
+## Units
+
+The card shows the values and units that Home Assistant gives it. If your Home Assistant uses imperial units and the sensors have a device class, the values arrive already converted (for example pounds and miles) and the card shows them as they are. It does not convert anything itself. The goals for the rings (kcal, minutes, steps) do not depend on the unit system.
+
 ## Trend charts
 
 The card shows current values only. For trends, see [`examples/dashboard.yaml`](examples/dashboard.yaml): a two-view dashboard (today + trends) that uses native statistics graphs and [apexcharts-card](https://github.com/RomRider/apexcharts-card). The trends view has sleep (total and stages), resting heart rate and HRV (daily average), steps, active energy, exercise minutes with a 30 min goal line, weight and VO2 max. Replace the `iphone` prefix in the sensor names with yours.
@@ -166,7 +191,7 @@ Why the sleep and heart charts do not use daily statistics: since data arrives o
 
 ## Privacy
 
-This card only reads states that the current Home Assistant user can already see. It makes no network requests and writes nothing.
+This card only reads states that the current Home Assistant user can already see. It writes nothing and talks to nothing but your own Home Assistant. With `sparklines` it asks Home Assistant for the last days of history of the metrics you chose, through the normal Home Assistant connection.
 
 Health data is sensitive. Consider putting the card on a dashboard restricted to administrators (dashboard settings → *Admin only*), not on a shared wall tablet, and check that the health sensors are not exposed to voice assistants or to the HomeKit bridge.
 

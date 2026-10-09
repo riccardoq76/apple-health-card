@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.0 — 2026-10-09
+
+- **Spanish and German translations**, contributed by @agarridob and @Kununa. The card now speaks English, Italian, Spanish and German. The language selector of the visual editor has all four.
+- **New `sparklines` option**: a small chart of the last 7 days inside the tiles (`true` for sleep, resting heart rate, HRV and weight, or a list of metrics). It reads the raw history from Home Assistant at most every 10 minutes and the card works without it if the request fails. Off by default.
+- **`averages` supports more metrics**: walking heart rate, respiratory rate and blood oxygen, besides sleep, resting heart rate and HRV. Steps and active energy are not supported on purpose (they are growing counters, so the comparison would be misleading).
+- README: new sections on mini charts and units (nothing to configure: Home Assistant already gives the values in your unit system).
+- Without the new options nothing changes.
+
 ## 2.3.0 — 2026-10-09
 
 - Weight, body fat, lean mass, water and VO2 max: the "x ago" label now counts from the last time the value *changed*. The Companion app can resend the same value several times, which made an old weighing look new. After a Home Assistant restart the label restarts from the first update.
