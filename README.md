@@ -212,7 +212,7 @@ Things to know:
 - Each point is one day: the last value for sleep and weight, the daily average for resting heart rate and HRV, the highest value for steps, active energy and exercise minutes (counters that grow during the day, so today's bar is still partial).
 - The card asks Home Assistant for the history at most every 10 minutes. If that fails, it says so.
 - On wide screens the sections go in two columns (Sleep | Heart, Activity | Body). The card must be wide enough (about 760 px): put it in a section with `column_span: 2`, in a view with `max_columns: 2`. Phones show one column.
-- It has no visual editor yet: use the YAML editor. A full example is in [`examples/dashboard-trends.yaml`](examples/dashboard-trends.yaml).
+- It has a visual editor for the basic options (title, prefix, days, goals, language, which charts to show). For the rest (`entities`, `weight_range`) use the YAML editor. A full example is in [`examples/dashboard-trends.yaml`](examples/dashboard-trends.yaml).
 - If something looks wrong with your data, please open an issue.
 
 ## Trend charts (with apexcharts-card)

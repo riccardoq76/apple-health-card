@@ -55,7 +55,7 @@
  *                 exercise, weight, vo2max.
  */
 
-const VERSION = "2.5.0";
+const VERSION = "2.6.0";
 
 /* ------------------------------------------------------------------ */
 /* Definizione metriche                                                */
@@ -159,6 +159,7 @@ const I18N = {
     units: { steps: "passi", floors: "piani", brmin: "atti/min" },
     spark: "Ultimi 7 giorni",
     trends: {
+      ed: { days: "Giorni mostrati (7–30)", body: "Giorni per peso e VO2 max (7–30)", sleep: "Obiettivo sonno (ore)", visible: "Grafici visibili", note: "Per le altre opzioni (entità, intervallo del peso) usa l'editor YAML." },
       title: "Andamento", range: "ultimi {n} giorni",
       sections: { sleep: "Sonno", heart: "Cuore", activity: "Attività", body: "Corpo" },
       panels: {
@@ -202,6 +203,7 @@ const I18N = {
     units: { steps: "steps", floors: "floors", brmin: "br/min" },
     spark: "Last 7 days",
     trends: {
+      ed: { days: "Days shown (7–30)", body: "Days for weight and VO2 max (7–30)", sleep: "Sleep goal (hours)", visible: "Visible charts", note: "For other options (entities, weight range) use the YAML editor." },
       title: "Trends", range: "last {n} days",
       sections: { sleep: "Sleep", heart: "Heart", activity: "Activity", body: "Body" },
       panels: {
@@ -245,6 +247,7 @@ const I18N = {
     units: { steps: "pasos", floors: "pisos", brmin: "resp/min" },
     spark: "Últimos 7 días",
     trends: {
+      ed: { days: "Días mostrados (7–30)", body: "Días para peso y VO2 máx (7–30)", sleep: "Objetivo de sueño (horas)", visible: "Gráficos visibles", note: "Para otras opciones (entidades, rango del peso) usa el editor YAML." },
       title: "Tendencias", range: "últimos {n} días",
       sections: { sleep: "Sueño", heart: "Corazón", activity: "Actividad", body: "Cuerpo" },
       panels: {
@@ -288,6 +291,7 @@ const I18N = {
     units: { steps: "Schritte", floors: "Etagen", brmin: "Atemzüge/min" },
     spark: "Letzte 7 Tage",
     trends: {
+      ed: { days: "Angezeigte Tage (7–30)", body: "Tage für Gewicht und VO2 max (7–30)", sleep: "Schlafziel (Stunden)", visible: "Sichtbare Diagramme", note: "Für weitere Optionen (Entitäten, Gewichtsbereich) den YAML-Editor verwenden." },
       title: "Verlauf", range: "letzte {n} Tage",
       sections: { sleep: "Schlaf", heart: "Herz", activity: "Aktivität", body: "Körper" },
       panels: {
@@ -1102,6 +1106,99 @@ const TRENDS_STYLE = `
   .note { background:var(--ahc-panel); border-radius:18px; padding:18px; font-size:13px; color:var(--ahc-muted); }
 `;
 
+/* Editor visuale della card Andamento (campi base; il resto via YAML) */
+class AppleHealthTrendsEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = config || {};
+    if (!this._rendered) this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (this._rendered && resolveLanguage(this._config, hass) !== this._lang) this._render();
+  }
+
+  _emit(config) {
+    this._config = config;
+    const e = new Event("config-changed", { bubbles: true, composed: true });
+    e.detail = { config };
+    this.dispatchEvent(e);
+  }
+
+  _render() {
+    this._rendered = true;
+    const c = this._config;
+    const g = c.goals || {};
+    this._lang = resolveLanguage(c, this._hass);
+    const T = I18N[this._lang];
+    const E = T.editor;
+    const D = T.trends.ed;
+    const lang = String(c.language || "auto").toLowerCase();
+    const sel = (v) => (lang === v ? " selected" : "");
+    const hidden = Array.isArray(c.hide) ? c.hide : [];
+    const num = (v) => (v === undefined || v === null ? "" : esc(v));
+    const checks = Object.keys(T.trends.panels)
+      .map((k) => `<label class="chk"><input type="checkbox" data-k="${k}"${hidden.includes(k) ? "" : " checked"}> ${esc(T.trends.panels[k])}</label>`)
+      .join("");
+    this.innerHTML = `
+      <style>
+        .row { display:flex; flex-direction:column; gap:4px; padding:8px 0; }
+        label { font-size:12px; color:var(--secondary-text-color); }
+        input[type=text], input[type=number], select { padding:8px; border-radius:8px; border:1px solid var(--divider-color);
+          background:var(--card-background-color); color:var(--primary-text-color); }
+        .chk { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--primary-text-color); padding:3px 0; }
+        p { font-size:12px; color:var(--secondary-text-color); }
+      </style>
+      <div class="row"><label>${esc(E.title)}</label><input id="title" type="text" value="${esc(c.title || T.trends.title)}"></div>
+      <div class="row"><label>${esc(E.prefix)}</label><input id="prefix" type="text" value="${esc(c.prefix || "")}"></div>
+      <div class="row"><label>${esc(D.days)}</label><input id="days" type="number" min="7" max="30" placeholder="14" value="${num(c.days)}"></div>
+      <div class="row"><label>${esc(D.body)}</label><input id="body" type="number" min="7" max="30" placeholder="30" value="${num(c.body_days)}"></div>
+      <div class="row"><label>${esc(D.sleep)}</label><input id="sleep" type="number" min="0" step="0.5" value="${num(g.sleep)}"></div>
+      <div class="row"><label>${esc(E.steps)}</label><input id="steps" type="number" placeholder="10000" value="${num(g.steps)}"></div>
+      <div class="row"><label>${esc(E.kcal)}</label><input id="kcal" type="number" placeholder="500" value="${num(g.active_energy)}"></div>
+      <div class="row"><label>${esc(E.min)}</label><input id="min" type="number" placeholder="30" value="${num(g.exercise)}"></div>
+      <div class="row"><label>${esc(E.language)}</label>
+        <select id="lang">
+          <option value="auto"${sel("auto")}>${esc(E.auto)}</option>
+          <option value="it"${sel("it")}>Italiano</option>
+          <option value="en"${sel("en")}>English</option>
+          <option value="es"${sel("es")}>Español</option>
+          <option value="de"${sel("de")}>Deutsch</option>
+        </select></div>
+      <div class="row"><label>${esc(D.visible)}</label>${checks}</div>
+      <p>${esc(D.note)}</p>
+      <p style="opacity:.7">Apple Health Card v${esc(VERSION)}</p>`;
+
+    const val = (id) => this.querySelector(id).value;
+    const update = () => {
+      const config = { ...this._config, type: "custom:apple-health-trends" };
+      const title = val("#title").trim();
+      if (title && title !== T.trends.title) config.title = title; else delete config.title;
+      config.prefix = val("#prefix").trim();
+      const opt = (key, id, ok) => {
+        const n = Number(val(id));
+        if (val(id) !== "" && ok(n)) config[key] = n; else delete config[key];
+      };
+      opt("days", "#days", (n) => n >= 7 && n <= 30);
+      opt("body_days", "#body", (n) => n >= 7 && n <= 30);
+      const goals = { ...(this._config.goals || {}) };
+      for (const [key, id] of [["sleep", "#sleep"], ["steps", "#steps"], ["active_energy", "#kcal"], ["exercise", "#min"]]) {
+        const n = Number(val(id));
+        if (val(id) !== "" && n > 0) goals[key] = n; else delete goals[key];
+      }
+      if (Object.keys(goals).length) config.goals = goals; else delete config.goals;
+      const chosen = val("#lang");
+      if (chosen === "auto") delete config.language; else config.language = chosen;
+      const hide = [...this.querySelectorAll("input[data-k]")].filter((i) => !i.checked).map((i) => i.dataset.k);
+      if (hide.length) config.hide = hide; else delete config.hide;
+      this._emit(config);
+      if (resolveLanguage(config, this._hass) !== this._lang) this._render();
+    };
+    this.querySelectorAll("input, select").forEach((i) => i.addEventListener("change", update));
+  }
+}
+
+
 class AppleHealthTrends extends HTMLElement {
   constructor() {
     super();
@@ -1113,6 +1210,10 @@ class AppleHealthTrends extends HTMLElement {
       this.shadowRoot.querySelectorAll(".hit.on").forEach((x) => x.classList.remove("on"));
       if (h && !was) h.classList.add("on");
     });
+  }
+
+  static getConfigElement() {
+    return document.createElement("apple-health-trends-editor");
   }
 
   static getStubConfig() {
@@ -1362,6 +1463,9 @@ if (!customElements.get("apple-health-trends")) {
 }
 if (!customElements.get("apple-health-card")) {
   customElements.define("apple-health-card", AppleHealthCard);
+}
+if (!customElements.get("apple-health-trends-editor")) {
+  customElements.define("apple-health-trends-editor", AppleHealthTrendsEditor);
 }
 if (!customElements.get("apple-health-card-editor")) {
   customElements.define("apple-health-card-editor", AppleHealthCardEditor);

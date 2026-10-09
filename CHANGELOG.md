@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.0 — 2026-10-09
+
+- Trends card: visual editor for the basic options (title, sensor prefix, days, goals, language and which charts to show). The rest (`entities`, `weight_range`) is still in YAML.
+
 ## 2.5.0 — 2026-10-09
 
 - **New card `custom:apple-health-trends`**, in the same file: the trends page as a card, in the style of the main card. Sleep (total and stages), resting heart rate and HRV (daily average), steps, active energy, exercise minutes, weight and VO2 max. Tap a bar or a point to see its value. No apexcharts-card needed. Options: `days`, `body_days`, `weight_range`, `goals`, `hide`, `title`. English, Italian, Spanish and German.
