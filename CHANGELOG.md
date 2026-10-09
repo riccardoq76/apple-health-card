@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.1 — 2026-10-09
+
+- Mini charts: the vertical scale now has a minimum range (10% of the average value). Before, a tiny change (for example 65.2 → 65.1 kg) filled the whole height and looked like a big drop.
+- The version number is now shown at the bottom of the visual editor.
+
 ## 2.4.0 — 2026-10-09
 
 - **Spanish and German translations**, contributed by @agarridob and @Kununa. The card now speaks English, Italian, Spanish and German. The language selector of the visual editor has all four.

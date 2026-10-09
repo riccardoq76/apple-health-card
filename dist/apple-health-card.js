@@ -46,7 +46,7 @@
  *   language:     ora anche "es" e "de".
  */
 
-const VERSION = "2.4.0";
+const VERSION = "2.4.1";
 
 /* ------------------------------------------------------------------ */
 /* Definizione metriche                                                */
@@ -519,8 +519,17 @@ class AppleHealthCard extends HTMLElement {
     const pts = this._spark && this._spark[key];
     if (!pts || pts.filter((v) => v !== null).length < 2) return "";
     const vals = pts.filter((v) => v !== null);
-    const min = Math.min(...vals), max = Math.max(...vals);
-    const span = max - min || 1;
+    let min = Math.min(...vals), max = Math.max(...vals);
+    // Variazione minima: il 10% del valore medio. Senza, uno scarto di 0,1 kg
+    // sul peso riempirebbe tutta l'altezza e sembrerebbe una grande variazione.
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const minSpan = Math.abs(mean) * 0.1 || 1;
+    if (max - min < minSpan) {
+      const mid = (max + min) / 2;
+      min = mid - minSpan / 2;
+      max = mid + minSpan / 2;
+    }
+    const span = max - min;
     const W = 100, H = 28, pad = 3;
     const x = (i) => (i / (pts.length - 1)) * W;
     const y = (v) => H - pad - ((v - min) / span) * (H - 2 * pad);
@@ -930,7 +939,8 @@ class AppleHealthCardEditor extends HTMLElement {
           <option value="es"${sel("es")}>Español</option>
           <option value="de"${sel("de")}>Deutsch</option>
         </select></div>
-      <p>${E.note}</p>`;
+      <p>${E.note}</p>
+      <p style="opacity:.7">Apple Health Card v${esc(VERSION)}</p>`;
 
     const val = (id) => this.querySelector(id).value;
     const update = () => {
