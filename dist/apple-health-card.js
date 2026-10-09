@@ -55,7 +55,7 @@
  *                 exercise, weight, vo2max.
  */
 
-const VERSION = "2.5.0-beta.2";
+const VERSION = "2.5.0-beta.3";
 
 /* ------------------------------------------------------------------ */
 /* Definizione metriche                                                */
@@ -1064,7 +1064,8 @@ const TRENDS_STYLE = `
   .range { font-size:13px; color:var(--ahc-muted); }
   .section-title { font-size:20px; font-weight:700; letter-spacing:-.3px; margin:22px 2px 8px; }
   .grid { display:grid; grid-template-columns:1fr; gap:10px; }
-  @container (min-width:700px) { .grid { grid-template-columns:1fr 1fr; } .title { font-size:32px; } }
+  .secs { display:grid; grid-template-columns:1fr; column-gap:24px; align-items:start; }
+  @container (min-width:760px) { .secs { grid-template-columns:1fr 1fr; } .title { font-size:32px; } }
   .panel { background:var(--ahc-panel); border:1px solid var(--ahc-border); border-radius:18px; padding:14px 14px 12px; }
   .ph { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:10px; }
   .pt { font-size:12px; font-weight:600; color:var(--ahc-muted); }
@@ -1346,8 +1347,9 @@ class AppleHealthTrends extends HTMLElement {
     else {
       inner = TREND_SECTIONS.map((s) => {
         const panels = s.panels.filter((k) => !this._hidden(k)).map((k) => this._panel(k, n)).join("");
-        return panels ? `<div class="section-title">${esc(T.sections[s.id])}</div><div class="grid">${panels}</div>` : "";
+        return panels ? `<div class="sec"><div class="section-title">${esc(T.sections[s.id])}</div><div class="grid">${panels}</div></div>` : "";
       }).join("");
+      inner = `<div class="secs">${inner}</div>`;
     }
     this.shadowRoot.innerHTML = `<style>${TRENDS_STYLE}</style><ha-card><div class="wrap">
       <div class="header"><div class="title">${esc(this._config.title || T.title)}</div><div class="range">${esc(f(T.range, { n }))}</div></div>${inner}</div></ha-card>`;

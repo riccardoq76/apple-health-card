@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.0-beta.3 — 2026-10-09 (pre-release)
+
+- Trends card: on wide screens (card wider than about 760 px) the sections are laid out in two columns, like a two-column dashboard (Sleep | Heart, Activity | Body). Charts inside a section stay stacked. Narrow screens are unchanged.
+
 ## 2.5.0-beta.2 — 2026-10-09 (pre-release)
 
 - Trends card: now wrapped in a `ha-card` with the same border and background as the main card.
