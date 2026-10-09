@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.0-beta.4 — 2026-10-09 (pre-release)
+
+- Trends card: the vertical scale of line charts (resting heart rate, HRV, VO2 max) now follows the data more closely. HRV with values between 15 and 60 used to get a 0–100 axis; now it is about 10–70.
+
 ## 2.5.0-beta.3 — 2026-10-09 (pre-release)
 
 - Trends card: on wide screens (card wider than about 760 px) the sections are laid out in two columns, like a two-column dashboard (Sleep | Heart, Activity | Body). Charts inside a section stay stacked. Narrow screens are unchanged.

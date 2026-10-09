@@ -55,7 +55,7 @@
  *                 exercise, weight, vo2max.
  */
 
-const VERSION = "2.5.0-beta.3";
+const VERSION = "2.5.0-beta.4";
 
 /* ------------------------------------------------------------------ */
 /* Definizione metriche                                                */
@@ -1040,15 +1040,16 @@ const TREND_COLORS = {
 };
 const TREND_UNITS = { resting_heart_rate: "bpm", hrv: "ms", steps: "", active_energy: "kcal", exercise: "min", weight: "kg", vo2max: "" };
 
-/** Estremi "tondi" per l'asse: 3 tacche con passo 1, 2, 5 o 10 (x potenze di 10). */
-function niceTicks(lo, hi, n) {
-  const raw = (hi - lo) / (n - 1) || 1;
+/** Estremi "tondi" per l'asse delle linee: seguono i dati (arrotondati a 1, 2, 5, 10...) con 3 tacche. */
+function niceTicks(lo, hi) {
+  const raw = (hi - lo) / 6 || 1;
   const mag = Math.pow(10, Math.floor(Math.log10(raw)));
   const fr = raw / mag;
-  const step = (fr <= 1 ? 1 : fr <= 2 ? 2 : fr <= 5 ? 5 : 10) * mag;
-  const a = Math.floor(lo / step) * step;
-  let b = a + step * (n - 1);
-  while (b < hi) b += step;
+  const g = Math.max(1, (fr <= 1 ? 1 : fr <= 2 ? 2 : fr <= 5 ? 5 : 10) * mag);
+  const a = Math.floor(lo / g) * g;
+  let b = Math.ceil(hi / g) * g;
+  if (b <= a) b = a + 2 * g;
+  if (Math.round((b - a) / g) % 2) b += g; // tacca centrale su un valore intero
   return { lo: a, hi: b };
 }
 const niceMax = (top, step) => Math.max(step, Math.ceil(top / step) * step);
@@ -1274,7 +1275,7 @@ class AppleHealthTrends extends HTMLElement {
       lo = Math.min(...vals); hi = Math.max(...vals);
       const ms = Math.abs(vals.reduce((a, b) => a + b, 0) / vals.length) * 0.1 || 1;
       if (hi - lo < ms) { const mid = (hi + lo) / 2; lo = mid - ms / 2; hi = mid + ms / 2; }
-      const t = niceTicks(lo, hi, 3); lo = t.lo; hi = t.hi;
+      const t = niceTicks(lo, hi); lo = t.lo; hi = t.hi;
     }
     const ticks = [0, 1, 2].map((i) => fmtNumber(lo + ((hi - lo) * i) / 2, 0));
     const x = (i) => ((i + 0.5) / n) * 100;
