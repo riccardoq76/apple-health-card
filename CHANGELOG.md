@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.0-beta.2 — 2026-10-09 (pre-release)
+
+- Trends card: now wrapped in a `ha-card` with the same border and background as the main card.
+
 ## 2.5.0-beta.1 — 2026-10-09 (pre-release)
 
 - **New card `custom:apple-health-trends`** (beta), in the same file: the trends page as a card, in the style of the main card. Sleep (total and stages), resting heart rate and HRV (daily average), steps, active energy, exercise minutes, weight and VO2 max. Tap a day to see its value. No apexcharts-card needed. Options: `days`, `body_days`, `weight_range`, `goals`, `hide`, `title`. English, Italian, Spanish and German.

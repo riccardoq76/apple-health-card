@@ -55,7 +55,7 @@
  *                 exercise, weight, vo2max.
  */
 
-const VERSION = "2.5.0-beta.1";
+const VERSION = "2.5.0-beta.2";
 
 /* ------------------------------------------------------------------ */
 /* Definizione metriche                                                */
@@ -1055,6 +1055,7 @@ const niceMax = (top, step) => Math.max(step, Math.ceil(top / step) * step);
 
 const TRENDS_STYLE = `
   :host { display:block; }
+  ha-card { overflow:hidden; background: var(--primary-background-color); }
   .wrap { container-type:inline-size; font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",var(--paper-font-body1_-_font-family,sans-serif);
     padding:18px 16px 20px; color:var(--primary-text-color);
     --ahc-panel:var(--ha-card-background,var(--card-background-color,#fff)); --ahc-muted:var(--secondary-text-color); --ahc-border:var(--divider-color,rgba(0,0,0,.08)); }
@@ -1348,8 +1349,8 @@ class AppleHealthTrends extends HTMLElement {
         return panels ? `<div class="section-title">${esc(T.sections[s.id])}</div><div class="grid">${panels}</div>` : "";
       }).join("");
     }
-    this.shadowRoot.innerHTML = `<style>${TRENDS_STYLE}</style><div class="wrap">
-      <div class="header"><div class="title">${esc(this._config.title || T.title)}</div><div class="range">${esc(f(T.range, { n }))}</div></div>${inner}</div>`;
+    this.shadowRoot.innerHTML = `<style>${TRENDS_STYLE}</style><ha-card><div class="wrap">
+      <div class="header"><div class="title">${esc(this._config.title || T.title)}</div><div class="range">${esc(f(T.range, { n }))}</div></div>${inner}</div></ha-card>`;
   }
 }
 
