@@ -1,0 +1,34 @@
+# Example dashboard with the two cards of this repository (no apexcharts-card needed).
+# Paste into: Settings > Dashboards > (your dashboard) > Edit > three dots > Raw configuration editor.
+# Replace "iphone" with your own Companion app sensor prefix (sensor.<prefix>_heart_rate ...).
+views:
+- title: Oggi
+  path: oggi
+  icon: mdi:heart-pulse
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    column_span: 2
+    cards:
+    - type: custom:apple-health-card
+      prefix: iphone
+      sparklines: true
+      grid_options:
+        columns: full
+- title: Andamento
+  path: andamento
+  icon: mdi:chart-line
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    column_span: 2
+    cards:
+    - type: custom:apple-health-trends
+      prefix: iphone
+      days: 14
+      goals:
+        sleep: 7
+      grid_options:
+        columns: full

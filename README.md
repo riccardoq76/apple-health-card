@@ -183,7 +183,36 @@ Things to know:
 
 The card shows the values and units that Home Assistant gives it. If your Home Assistant uses imperial units and the sensors have a device class, the values arrive already converted (for example pounds and miles) and the card shows them as they are. It does not convert anything itself. The goals for the rings (kcal, minutes, steps) do not depend on the unit system.
 
-## Trend charts
+## Trends card (beta)
+
+The same file also contains a second card, `custom:apple-health-trends`: the last days of sleep, heart rate, activity and weight, in the same style. It does not need apexcharts-card. Tap (or click) a day to see its value.
+
+```yaml
+type: custom:apple-health-trends
+prefix: iphone
+days: 14
+goals:
+  sleep: 7
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `prefix`, `entities`, `language` | | Same as the main card. |
+| `days` | `14` | Days shown, from 7 to 30. |
+| `body_days` | `30` | Days shown for weight and VO2 max (they change rarely). |
+| `weight_range` | auto | Fixed range for the weight chart, e.g. `[62, 72]`. Without it the scale adapts, with a minimum range so tiny changes look small. |
+| `goals` | | `sleep` (hours) draws a goal line on the sleep chart; `steps`, `active_energy`, `exercise` are the same goals as the rings. |
+| `hide` | | Charts to hide: `sleep`, `stages`, `resting_heart_rate`, `hrv`, `steps`, `active_energy`, `exercise`, `weight`, `vo2max`. |
+| `title` | | Card title. |
+
+Things to know:
+- It uses the raw history of Home Assistant, for the reason explained below, so it is limited by the recorder retention (10 days by default; see `purge_keep_days`). Days without data are left empty.
+- Each point is one day: the last value for sleep and weight, the daily average for resting heart rate and HRV, the highest value for steps, active energy and exercise minutes (counters that grow during the day, so today's bar is still partial).
+- The card asks Home Assistant for the history at most every 10 minutes. If that fails, it says so.
+- It has no visual editor yet: use the YAML editor. A full example is in [`examples/dashboard-trends.yaml`](examples/dashboard-trends.yaml).
+- This card is new: if something looks wrong with your data, please open an issue.
+
+## Trend charts (with apexcharts-card)
 
 The card shows current values only. For trends, see [`examples/dashboard.yaml`](examples/dashboard.yaml): a two-view dashboard (today + trends) that uses native statistics graphs and [apexcharts-card](https://github.com/RomRider/apexcharts-card). The trends view has sleep (total and stages), resting heart rate and HRV (daily average), steps, active energy, exercise minutes with a 30 min goal line, weight and VO2 max. Replace the `iphone` prefix in the sensor names with yours.
 

@@ -44,9 +44,18 @@
  *                 Con true: sleep, resting_heart_rate, hrv, weight.
  *                 Legge la cronologia di Home Assistant (nessun'altra richiesta).
  *   language:     ora anche "es" e "de".
+ *
+ * Seconda card, nello stesso file: custom:apple-health-trends (andamento).
+ *   prefix, entities, goals, hide, language: come sopra.
+ *   days:         giorni mostrati, da 7 a 30 (default 14).
+ *   body_days:    giorni per peso e VO2 max (default 30).
+ *   weight_range: [min, max] fisso per l'asse del peso (opzionale).
+ *   goals.sleep:  ore, disegna la linea dell'obiettivo sul sonno (opzionale).
+ *   hide:         sleep, stages, resting_heart_rate, hrv, steps, active_energy,
+ *                 exercise, weight, vo2max.
  */
 
-const VERSION = "2.4.1";
+const VERSION = "2.5.0-beta.1";
 
 /* ------------------------------------------------------------------ */
 /* Definizione metriche                                                */
@@ -149,6 +158,16 @@ const I18N = {
     goal: "{pct}% di {goal}",
     units: { steps: "passi", floors: "piani", brmin: "atti/min" },
     spark: "Ultimi 7 giorni",
+    trends: {
+      title: "Andamento", range: "ultimi {n} giorni",
+      sections: { sleep: "Sonno", heart: "Cuore", activity: "Attività", body: "Corpo" },
+      panels: {
+        sleep: "Sonno totale per notte", stages: "Fasi del sonno", resting_heart_rate: "FC a riposo (media giornaliera)",
+        hrv: "Variabilità HRV (media giornaliera)", steps: "Passi al giorno", active_energy: "Energia attiva",
+        exercise: "Minuti di esercizio", weight: "Peso", vo2max: "VO2 max",
+      },
+      noData: "nessun dato", total: "Totale", noHistory: "Cronologia non disponibile.", loading: "Carico la cronologia…",
+    },
     age: { now: "adesso", min: "{n} min fa", hours: "{n} h fa", yesterday: "ieri", days: "{n} giorni fa" },
     delta: {
       same: "In linea con la media 7 gg",
@@ -182,6 +201,16 @@ const I18N = {
     goal: "{pct}% of {goal}",
     units: { steps: "steps", floors: "floors", brmin: "br/min" },
     spark: "Last 7 days",
+    trends: {
+      title: "Trends", range: "last {n} days",
+      sections: { sleep: "Sleep", heart: "Heart", activity: "Activity", body: "Body" },
+      panels: {
+        sleep: "Total sleep per night", stages: "Sleep stages", resting_heart_rate: "Resting heart rate (daily average)",
+        hrv: "HRV (daily average)", steps: "Steps per day", active_energy: "Active energy",
+        exercise: "Exercise minutes", weight: "Weight", vo2max: "VO2 max",
+      },
+      noData: "no data", total: "Total", noHistory: "History is not available.", loading: "Loading history…",
+    },
     age: { now: "now", min: "{n} min ago", hours: "{n} h ago", yesterday: "yesterday", days: "{n} days ago" },
     delta: {
       same: "In line with 7-day avg",
@@ -215,6 +244,16 @@ const I18N = {
     goal: "{pct}% de {goal}",
     units: { steps: "pasos", floors: "pisos", brmin: "resp/min" },
     spark: "Últimos 7 días",
+    trends: {
+      title: "Tendencias", range: "últimos {n} días",
+      sections: { sleep: "Sueño", heart: "Corazón", activity: "Actividad", body: "Cuerpo" },
+      panels: {
+        sleep: "Sueño total por noche", stages: "Fases del sueño", resting_heart_rate: "FC en reposo (media diaria)",
+        hrv: "Variabilidad (VFC), media diaria", steps: "Pasos al día", active_energy: "Energía activa",
+        exercise: "Minutos de ejercicio", weight: "Peso", vo2max: "VO2 máx.",
+      },
+      noData: "sin datos", total: "Total", noHistory: "El historial no está disponible.", loading: "Cargando historial…",
+    },
     age: { now: "ahora", min: "hace {n} min", hours: "hace {n} h", yesterday: "ayer", days: "hace {n} días" },
     delta: {
       same: "En línea con la media de 7 días",
@@ -248,6 +287,16 @@ const I18N = {
     goal: "{pct}% von {goal}",
     units: { steps: "Schritte", floors: "Etagen", brmin: "Atemzüge/min" },
     spark: "Letzte 7 Tage",
+    trends: {
+      title: "Verlauf", range: "letzte {n} Tage",
+      sections: { sleep: "Schlaf", heart: "Herz", activity: "Aktivität", body: "Körper" },
+      panels: {
+        sleep: "Gesamtschlaf pro Nacht", stages: "Schlafphasen", resting_heart_rate: "Ruheherzfrequenz (Tagesdurchschnitt)",
+        hrv: "Herzfrequenzvariabilität (Tagesdurchschnitt)", steps: "Schritte pro Tag", active_energy: "Aktive Energie",
+        exercise: "Trainingsminuten", weight: "Gewicht", vo2max: "VO2 max",
+      },
+      noData: "keine Daten", total: "Gesamt", noHistory: "Verlauf nicht verfügbar.", loading: "Verlauf wird geladen…",
+    },
     age: { now: "jetzt", min: "vor {n} Min.", hours: "vor {n} Std.", yesterday: "gestern", days: "vor {n} Tagen" },
     delta: {
       same: "Im 7-Tage-Schnitt",
@@ -374,6 +423,19 @@ function fmtAge(date, now) {
   return d === 1 ? I.age.yesterday : f(I.age.days, { n: d });
 }
 
+/** Mappa metrica → entity_id. Nessuna ricerca: solo prefisso o override. */
+function buildEntityMap(config) {
+  const map = {};
+  const prefix = (config.prefix || "").trim();
+  const overrides = config.entities || {};
+  const all = [...RINGS, ...SECTIONS.flatMap((s) => s.metrics), SLEEP.total, ...SLEEP.stages];
+  for (const m of all) {
+    if (overrides[m.key]) map[m.key] = overrides[m.key];
+    else if (prefix) map[m.key] = `sensor.${prefix}_${m.suffix}`;
+  }
+  return map;
+}
+
 /**
  * Riassume una cronologia grezza in un valore per giorno.
  * rows: elementi nel formato compatto di Home Assistant (s = stato,
@@ -444,20 +506,7 @@ class AppleHealthCard extends HTMLElement {
 
   /** Mappa metrica → entity_id. Nessuna ricerca: solo prefisso o override. */
   _buildEntityMap() {
-    const map = {};
-    const prefix = (this._config.prefix || "").trim();
-    const overrides = this._config.entities || {};
-    const all = [
-      ...RINGS,
-      ...SECTIONS.flatMap((s) => s.metrics),
-      SLEEP.total,
-      ...SLEEP.stages,
-    ];
-    for (const m of all) {
-      if (overrides[m.key]) map[m.key] = overrides[m.key];
-      else if (prefix) map[m.key] = `sensor.${prefix}_${m.suffix}`;
-    }
-    return map;
+    return buildEntityMap(this._config);
   }
 
   /** Mappa metrica → sensore media. Solo le metriche supportate. */
@@ -967,6 +1016,346 @@ class AppleHealthCardEditor extends HTMLElement {
   }
 }
 
+
+/* ------------------------------------------------------------------ */
+/* Card Andamento (apple-health-trends)                                */
+/* ------------------------------------------------------------------ */
+
+/** Come riassumere ogni giorno: last = ultimo valore, avg = media, max = massimo. */
+const TREND_AGG = {
+  sleep: "last", sleep_deep: "last", sleep_core: "last", sleep_rem: "last", sleep_awake: "last",
+  resting_heart_rate: "avg", hrv: "avg", steps: "max", active_energy: "max", exercise: "max",
+  weight: "last", vo2max: "last",
+};
+const TREND_SECTIONS = [
+  { id: "sleep", panels: ["sleep", "stages"] },
+  { id: "heart", panels: ["resting_heart_rate", "hrv"] },
+  { id: "activity", panels: ["steps", "active_energy", "exercise"] },
+  { id: "body", panels: ["weight", "vo2max"] },
+];
+const TREND_SPAN = 30;
+const TREND_COLORS = {
+  sleep: "#5E5CE6", resting_heart_rate: "#FF453A", hrv: "#BF5AF2", steps: "#FF9F0A",
+  active_energy: "#FA114F", exercise: "#92E82A", weight: "#AF8E6B", vo2max: "#30D158",
+};
+const TREND_UNITS = { resting_heart_rate: "bpm", hrv: "ms", steps: "", active_energy: "kcal", exercise: "min", weight: "kg", vo2max: "" };
+
+/** Estremi "tondi" per l'asse: 3 tacche con passo 1, 2, 5 o 10 (x potenze di 10). */
+function niceTicks(lo, hi, n) {
+  const raw = (hi - lo) / (n - 1) || 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const fr = raw / mag;
+  const step = (fr <= 1 ? 1 : fr <= 2 ? 2 : fr <= 5 ? 5 : 10) * mag;
+  const a = Math.floor(lo / step) * step;
+  let b = a + step * (n - 1);
+  while (b < hi) b += step;
+  return { lo: a, hi: b };
+}
+const niceMax = (top, step) => Math.max(step, Math.ceil(top / step) * step);
+
+const TRENDS_STYLE = `
+  :host { display:block; }
+  .wrap { container-type:inline-size; font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",var(--paper-font-body1_-_font-family,sans-serif);
+    padding:18px 16px 20px; color:var(--primary-text-color);
+    --ahc-panel:var(--ha-card-background,var(--card-background-color,#fff)); --ahc-muted:var(--secondary-text-color); --ahc-border:var(--divider-color,rgba(0,0,0,.08)); }
+  .header { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:6px; }
+  .title { font-size:28px; font-weight:700; letter-spacing:-.5px; }
+  .range { font-size:13px; color:var(--ahc-muted); }
+  .section-title { font-size:20px; font-weight:700; letter-spacing:-.3px; margin:22px 2px 8px; }
+  .grid { display:grid; grid-template-columns:1fr; gap:10px; }
+  @container (min-width:700px) { .grid { grid-template-columns:1fr 1fr; } .title { font-size:32px; } }
+  .panel { background:var(--ahc-panel); border:1px solid var(--ahc-border); border-radius:18px; padding:14px 14px 12px; }
+  .ph { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:10px; }
+  .pt { font-size:12px; font-weight:600; color:var(--ahc-muted); }
+  .pv { font-size:22px; font-weight:700; letter-spacing:-.5px; white-space:nowrap; }
+  .pv small { font-size:12px; font-weight:600; color:var(--ahc-muted); margin-left:3px; }
+  .chart { display:grid; grid-template-columns:36px 1fr; grid-template-rows:140px auto; column-gap:6px; }
+  .ylab { position:relative; font-size:10px; color:var(--ahc-muted); text-align:right; }
+  .ylab span { position:absolute; right:0; transform:translateY(50%); }
+  .plot { position:relative; border-bottom:1px solid var(--ahc-border); }
+  .gl { position:absolute; left:0; right:0; border-top:1px dashed var(--ahc-border); }
+  .cols { position:absolute; inset:0; display:flex; align-items:flex-end; gap:3px; }
+  .col { flex:1; height:100%; display:flex; flex-direction:column-reverse; justify-content:flex-start; }
+  .seg { width:100%; }
+  .col > .seg:last-child { border-radius:4px 4px 0 0; }
+  .goal { position:absolute; left:0; right:0; border-top:2px dashed #8E8E93; opacity:.8; }
+  .goal b { position:absolute; right:0; top:-16px; font-size:10px; color:var(--ahc-muted); font-weight:600; }
+  svg.ln { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+  .xl { grid-column:2; display:flex; gap:3px; font-size:10px; color:var(--ahc-muted); margin-top:4px; }
+  .xl span { flex:1; text-align:center; white-space:nowrap; }
+  .legend { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:8px; font-size:11px; color:var(--ahc-muted); }
+  .legend i { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
+  .hits { position:absolute; inset:0; display:flex; gap:3px; }
+  .hit { flex:1; position:relative; cursor:pointer; -webkit-tap-highlight-color:transparent; border-radius:4px; }
+  .hit.on { background:rgba(120,120,128,.14); }
+  .tip { display:none; position:absolute; top:-6px; left:50%; transform:translate(-50%,-100%); z-index:3;
+    background:var(--primary-text-color,#111); color:var(--ahc-panel); border-radius:8px; padding:5px 8px; font-size:11px; line-height:1.35;
+    white-space:nowrap; pointer-events:none; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+  .tip b { display:block; font-weight:700; }
+  .hit.on .tip { display:block; }
+  .hit.l .tip { left:0; transform:translate(0,-100%); }
+  .hit.r .tip { left:auto; right:0; transform:translate(0,-100%); }
+  .empty { height:140px; display:grid; place-items:center; font-size:12px; color:var(--ahc-muted); grid-column:1/-1; }
+  .note { background:var(--ahc-panel); border-radius:18px; padding:18px; font-size:13px; color:var(--ahc-muted); }
+`;
+
+class AppleHealthTrends extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._state = "idle"; // idle | loading | ready | error
+    this.shadowRoot.addEventListener("click", (e) => {
+      const h = e.target.closest(".hit");
+      const was = h && h.classList.contains("on");
+      this.shadowRoot.querySelectorAll(".hit.on").forEach((x) => x.classList.remove("on"));
+      if (h && !was) h.classList.add("on");
+    });
+  }
+
+  static getStubConfig() {
+    return { type: "custom:apple-health-trends", prefix: "" };
+  }
+
+  setConfig(config) {
+    if (!config) throw new Error("Configurazione mancante");
+    const d = Number(config.days);
+    this._config = { ...config, days: d >= 7 && d <= TREND_SPAN ? Math.round(d) : 14 };
+    this._ids = buildEntityMap(this._config);
+    this._data = null;
+    this._at = 0;
+    this._state = "idle";
+    if (this._hass) { this._load(); this._render(); }
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (!this._config) return;
+    const lang = hass.language || "";
+    if (this._lang !== lang && this._state === "ready") { this._lang = lang; this._render(); }
+    this._lang = lang;
+    if (this._state !== "loading" && Date.now() - this._at > SPARK_REFRESH_MS) this._load();
+    else if (this._state === "idle") this._render();
+  }
+
+  getCardSize() { return 14; }
+  getGridOptions() { return { columns: 12, min_columns: 6 }; }
+
+  _hidden(k) {
+    const h = this._config.hide;
+    return Array.isArray(h) && h.includes(k);
+  }
+
+  _load() {
+    if (!this._hass || typeof this._hass.callWS !== "function") { this._state = "error"; this._render(); return; }
+    const keys = Object.keys(TREND_AGG).filter((k) => this._ids[k]);
+    if (!keys.length) { this._state = "ready"; this._data = {}; this._render(); return; }
+    this._state = "loading";
+    this._at = Date.now();
+    const now = new Date();
+    const days = [];
+    for (let i = TREND_SPAN - 1; i >= 0; i--) days.push(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i).getTime());
+    this._days = days;
+    if (!this._data) this._render();
+    this._hass
+      .callWS({
+        type: "history/history_during_period",
+        start_time: new Date(days[0]).toISOString(),
+        end_time: new Date().toISOString(),
+        entity_ids: keys.map((k) => this._ids[k]),
+        include_start_time_state: false,
+        significant_changes_only: false,
+        minimal_response: true,
+        no_attributes: true,
+      })
+      .then((res) => {
+        const d = {};
+        for (const k of keys) d[k] = bucketDays(res && res[this._ids[k]], days, TREND_AGG[k]);
+        this._data = d;
+        this._state = "ready";
+        this._render();
+      })
+      .catch(() => {
+        this._state = "error";
+        this._render();
+      });
+  }
+
+  _applyLanguage() {
+    I = I18N[resolveLanguage(this._config, this._hass)];
+    LOCALE = resolveLocale(this._config, this._hass);
+  }
+
+  _slice(k, n) { return ((this._data && this._data[k]) || []).slice(-n); }
+
+  _last(k) {
+    const st = this._hass && this._hass.states && this._hass.states[this._ids[k]];
+    const cur = num(st);
+    if (isFinite(cur)) return cur;
+    const a = (this._data && this._data[k]) || [];
+    for (let i = a.length - 1; i >= 0; i--) if (a[i] !== null) return a[i];
+    return null;
+  }
+
+  _unit(k) {
+    const st = this._hass && this._hass.states && this._hass.states[this._ids[k]];
+    return (st && unitLabel(st)) || TREND_UNITS[k] || "";
+  }
+
+  _date(i, n) {
+    const t = this._days.slice(-n)[i];
+    return new Intl.DateTimeFormat(LOCALE, { weekday: "short", day: "numeric", month: "short" }).format(t);
+  }
+
+  _xl(n) {
+    const days = this._days.slice(-n);
+    const step = n > 20 ? 5 : n > 10 ? 2 : 1;
+    const fd = new Intl.DateTimeFormat(LOCALE, { day: "numeric" });
+    const fm = new Intl.DateTimeFormat(LOCALE, { month: "short" });
+    return `<div class="xl">${days
+      .map((t, i) => `<span>${(n - 1 - i) % step === 0 ? esc(fd.format(t) + (new Date(t).getDate() === 1 ? " " + fm.format(t) : "")) : ""}</span>`)
+      .join("")}</div>`;
+  }
+
+  _hits(n, tip) {
+    return `<div class="hits">${[...Array(n).keys()]
+      .map((i) => `<div class="hit${i < 2 ? " l" : i > n - 3 ? " r" : ""}"><div class="tip"><b>${esc(this._date(i, n))}</b>${tip(i)}</div></div>`)
+      .join("")}</div>`;
+  }
+
+  _frame(plot, ticks, n, tip) {
+    return `<div class="chart">
+      <div class="ylab">${ticks.map((t, i) => `<span style="bottom:${(i / (ticks.length - 1)) * 100}%">${esc(t)}</span>`).join("")}</div>
+      <div class="plot">${ticks.slice(1).map((t, i) => `<div class="gl" style="bottom:${((i + 1) / (ticks.length - 1)) * 100}%"></div>`).join("")}${plot}${tip ? this._hits(n, tip) : ""}</div>
+      ${this._xl(n)}</div>`;
+  }
+
+  _empty() { return `<div class="chart"><div class="empty">${esc(I.trends.noData)}</div></div>`; }
+
+  _bars(k, n, color, { goal, step, axis, tip, unit }) {
+    const v = this._slice(k, n);
+    const vals = v.filter((x) => x !== null);
+    if (!vals.length) return this._empty();
+    const max = niceMax(Math.max(...vals, (goal || 0) * 1.12), step);
+    const ticks = [0, 1, 2].map((i) => axis((max * i) / 2));
+    const cols = v
+      .map((x) => `<div class="col">${x === null ? "" : `<div class="seg" style="height:${(x / max) * 100}%;background:${color}"></div>`}</div>`)
+      .join("");
+    const g = goal ? `<div class="goal" style="bottom:${(goal / max) * 100}%"><b>${esc(axis(goal))}</b></div>` : "";
+    return this._frame(`<div class="cols">${cols}</div>${g}`, ticks, n, (i) =>
+      v[i] === null ? esc(I.trends.noData) : `${esc(tip(v[i]))} ${esc(unit || "")}`.trim());
+  }
+
+  _stack(n) {
+    const keys = ["sleep_deep", "sleep_core", "sleep_rem", "sleep_awake"];
+    const colors = ["#5E5CE6", "#0A84FF", "#64D2FF", "#FF9F0A"];
+    const cols = [...Array(n).keys()].map((i) => keys.map((k) => this._slice(k, n)[i]));
+    const tot = cols.map((c) => c.reduce((a, b) => a + (b || 0), 0));
+    if (!tot.some((x) => x > 0)) return this._empty();
+    const max = niceMax(Math.max(...tot), 60);
+    const ticks = [0, 1, 2].map((i) => `${fmtNumber((max * i) / 120, 0)} h`);
+    const html = cols
+      .map((c) => `<div class="col">${c.map((x, j) => (x ? `<div class="seg" style="height:${(x / max) * 100}%;background:${colors[j]}"></div>` : "")).join("")}</div>`)
+      .join("");
+    return this._frame(`<div class="cols">${html}</div>`, ticks, n, (i) =>
+      !tot[i] ? esc(I.trends.noData)
+        : cols[i].map((x, j) => (x ? `${esc(I.labels[keys[j]])} ${esc(fmtMinutes(x))}<br>` : "")).join("") + `${esc(I.trends.total)} ${esc(fmtMinutes(tot[i]))}`) +
+      `<div class="legend">${keys.map((k, j) => `<span><i style="background:${colors[j]}"></i>${esc(I.labels[k])}</span>`).join("")}</div>`;
+  }
+
+  _line(k, n, color, { range, tip }) {
+    const v = this._slice(k, n);
+    const vals = v.filter((x) => x !== null);
+    if (!vals.length) return this._empty();
+    let lo, hi;
+    if (Array.isArray(range) && range.length === 2 && Number(range[0]) < Number(range[1])) { lo = Number(range[0]); hi = Number(range[1]); }
+    else {
+      lo = Math.min(...vals); hi = Math.max(...vals);
+      const ms = Math.abs(vals.reduce((a, b) => a + b, 0) / vals.length) * 0.1 || 1;
+      if (hi - lo < ms) { const mid = (hi + lo) / 2; lo = mid - ms / 2; hi = mid + ms / 2; }
+      const t = niceTicks(lo, hi, 3); lo = t.lo; hi = t.hi;
+    }
+    const ticks = [0, 1, 2].map((i) => fmtNumber(lo + ((hi - lo) * i) / 2, 0));
+    const x = (i) => ((i + 0.5) / n) * 100;
+    const y = (val) => 100 - ((Math.min(Math.max(val, lo), hi) - lo) / (hi - lo)) * 100;
+    const connect = k === "weight" || k === "vo2max";
+    let d = "", dots = "", pen = false;
+    v.forEach((val, i) => {
+      if (val === null) { if (!connect) pen = false; return; }
+      d += `${pen ? "L" : "M"}${x(i).toFixed(2)} ${y(val).toFixed(2)} `;
+      pen = true;
+      dots += `M${x(i).toFixed(2)} ${y(val).toFixed(2)}h0`;
+    });
+    const svg = `<svg class="ln" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d="${d.trim()}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+      <path d="${dots}" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round" vector-effect="non-scaling-stroke"></path></svg>`;
+    return this._frame(svg, ticks, n, (i) => (v[i] === null ? esc(I.trends.noData) : esc(tip(v[i]))));
+  }
+
+  _panel(key, n) {
+    const T = I.trends;
+    const goals = this._config.goals || {};
+    const color = TREND_COLORS[key] || TREND_COLORS.sleep;
+    const unit = this._unit(key);
+    const cur = this._last(key);
+    const num0 = (x) => fmtNumber(x, 0);
+    const withUnit = (x, d) => `${fmtNumber(x, d)}${unit ? " " + unit : ""}`;
+    let value = "—", body = "";
+    switch (key) {
+      case "sleep": {
+        value = cur === null ? "—" : esc(fmtMinutes(cur));
+        const g = Number(goals.sleep) > 0 ? Number(goals.sleep) * 60 : 0;
+        body = this._bars("sleep", n, color, { goal: g, step: 120, axis: (m) => `${fmtNumber(m / 60, 0)} h`, tip: fmtMinutes });
+        break;
+      }
+      case "stages": return `<div class="panel"><div class="ph"><span class="pt">${esc(T.panels.stages)}</span></div>${this._stack(n)}</div>`;
+      case "resting_heart_rate":
+      case "hrv":
+        value = cur === null ? "—" : `${esc(num0(cur))}<small>${esc(unit)}</small>`;
+        body = this._line(key, n, color, { tip: (x) => withUnit(x, 0) });
+        break;
+      case "steps":
+      case "active_energy":
+      case "exercise": {
+        const goal = Number(goals[key]) || RINGS.find((r) => r.key === key).goal;
+        const step = key === "steps" ? 5000 : key === "active_energy" ? 250 : 30;
+        value = cur === null ? "—" : `${esc(num0(cur))}${unit ? `<small>${esc(unit)}</small>` : ""}`;
+        body = this._bars(key, n, color, { goal, step, axis: num0, tip: num0, unit });
+        break;
+      }
+      case "weight":
+      case "vo2max": {
+        const days = Math.min(TREND_SPAN, Math.max(n, Number(this._config.body_days) || TREND_SPAN));
+        value = cur === null ? "—" : `${esc(fmtNumber(cur, 1))}${unit ? `<small>${esc(unit)}</small>` : ""}`;
+        body = this._line(key, days, color, { range: key === "weight" ? this._config.weight_range : null, tip: (x) => withUnit(x, 1) });
+        break;
+      }
+    }
+    return `<div class="panel"><div class="ph"><span class="pt">${esc(T.panels[key])}</span><span class="pv">${value}</span></div>${body}</div>`;
+  }
+
+  _render() {
+    if (!this._hass || !this._config) return;
+    this._applyLanguage();
+    const T = I.trends;
+    const n = this._config.days;
+    let inner;
+    if (this._state === "error") inner = `<div class="note">${esc(T.noHistory)}</div>`;
+    else if (!this._data) inner = `<div class="note">${esc(T.loading)}</div>`;
+    else if (!Object.keys(this._ids).length) inner = `<div class="note"><strong>${esc(I.empty.title)}</strong><p>${f(I.empty.body, { prefix: esc(this._config.prefix || "—") })}</p></div>`;
+    else {
+      inner = TREND_SECTIONS.map((s) => {
+        const panels = s.panels.filter((k) => !this._hidden(k)).map((k) => this._panel(k, n)).join("");
+        return panels ? `<div class="section-title">${esc(T.sections[s.id])}</div><div class="grid">${panels}</div>` : "";
+      }).join("");
+    }
+    this.shadowRoot.innerHTML = `<style>${TRENDS_STYLE}</style><div class="wrap">
+      <div class="header"><div class="title">${esc(this._config.title || T.title)}</div><div class="range">${esc(f(T.range, { n }))}</div></div>${inner}</div>`;
+  }
+}
+
+if (!customElements.get("apple-health-trends")) {
+  customElements.define("apple-health-trends", AppleHealthTrends);
+}
 if (!customElements.get("apple-health-card")) {
   customElements.define("apple-health-card", AppleHealthCard);
 }
@@ -979,6 +1368,14 @@ if (!window.customCards.some((c) => c.type === "apple-health-card")) {
     type: "apple-health-card",
     name: "Apple Health Card",
     description: "Plancia stile Apple Salute per i sensori della app Companion",
+    preview: false,
+  });
+}
+if (!window.customCards.some((c) => c.type === "apple-health-trends")) {
+  window.customCards.push({
+    type: "apple-health-trends",
+    name: "Apple Health Trends",
+    description: "Andamento: grafici degli ultimi giorni per i sensori Salute della app Companion",
     preview: false,
   });
 }

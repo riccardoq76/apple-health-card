@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.0-beta.1 — 2026-10-09 (pre-release)
+
+- **New card `custom:apple-health-trends`** (beta), in the same file: the trends page as a card, in the style of the main card. Sleep (total and stages), resting heart rate and HRV (daily average), steps, active energy, exercise minutes, weight and VO2 max. Tap a day to see its value. No apexcharts-card needed. Options: `days`, `body_days`, `weight_range`, `goals`, `hide`, `title`. English, Italian, Spanish and German.
+- The main card is unchanged. The example dashboard with apexcharts-card is still available; a new example uses the two cards (`examples/dashboard-trends.yaml`).
+
 ## 2.4.1 — 2026-10-09
 
 - Mini charts: the vertical scale now has a minimum range (10% of the average value). Before, a tiny change (for example 65.2 → 65.1 kg) filled the whole height and looked like a big drop.
