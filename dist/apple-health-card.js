@@ -28,7 +28,7 @@
  *   goals:        obiettivi anelli { steps, active_energy, exercise }
  *   stale_hours:  dopo quante ore un dato è "vecchio" (default 12)
  *   hide_missing: nasconde i riquadri senza dato (default true)
- *   language:     "auto" (default, segue la lingua di Home Assistant), "it", "en" o "es"
+ *   language:     "auto" (default, segue la lingua di Home Assistant), "it", "en", "es" o "de"
  *   averages:     mappa metrica → sensore "media 7 giorni" (opzionale).
  *                 Metriche supportate: sleep, resting_heart_rate, hrv.
  *                 Mostra la differenza rispetto alla media sotto il valore.
@@ -204,6 +204,38 @@ const I18N = {
       min: "Objetivo de ejercicio (min)", steps: "Objetivo de pasos", stale: "Marcar dato como antiguo tras (horas)",
       language: "Idioma", auto: "Automático (igual que Home Assistant)",
       note: "Para usar otras entidades, define <code>entities:</code> en el editor YAML.",
+    },
+  },
+  de: {
+    title: "Gesundheit",
+    labels: {
+      active_energy: "Bewegen", exercise: "Trainieren", steps: "Schritte",
+      distance: "Gehen + Laufen", flights: "Etagen gestiegen", resting_energy: "Ruheenergie", vo2max: "VO2 max",
+      heart_rate: "Herzfrequenz", resting_heart_rate: "Ruheherzfrequenz", walking_heart_rate: "Ø-Herzfrequenz (Gehen)",
+      hrv: "Herzfrequenz­variabilität", spo2: "Blutsauerstoff", respiratory_rate: "Atemfrequenz",
+      weight: "Gewicht", body_fat: "Körperfettanteil", lean_mass: "Magere Körpermasse", water: "Wasser",
+      sleep_awake: "Wach", sleep_rem: "REM", sleep_core: "Kern", sleep_deep: "Tief",
+    },
+    sections: { activity: "Aktivität", heart: "Herz und Atmung", body: "Körper", sleep: "Schlaf" },
+    lastNight: "Letzte Nacht",
+    noData: "keine Daten",
+    goal: "{pct}% von {goal}",
+    units: { steps: "Schritte", floors: "Etagen", brmin: "Atemzüge/min" },
+    age: { now: "jetzt", min: "vor {n} Min.", hours: "vor {n} Std.", yesterday: "gestern", days: "vor {n} Tagen" },
+    delta: {
+      same: "Im 7-Tage-Schnitt",
+      diff: "{sign}{amount} ggü. 7-Tage-Schnitt",
+      title: "7-Tage-Durchschnitt: {avg}",
+    },
+    empty: {
+      title: "Keine Gesundheitsdaten gefunden",
+      body: "Prüfe das Präfix (<code>{prefix}</code>): Die Sensoren müssen <code>sensor.&lt;präfix&gt;_heart_rate</code> usw. heißen. Alternativ kannst du die Entitäten einzeln mit <code>entities:</code> angeben.",
+    },
+    editor: {
+      title: "Titel", prefix: "Sensor-Präfix (z. B. iphone)", kcal: "Ziel Aktivkalorien (kcal)",
+      min: "Ziel Trainingsminuten (min)", steps: "Ziel Schritte", stale: "Daten als veraltet markieren nach (Stunden)",
+      language: "Sprache", auto: "Automatisch (wie Home Assistant)",
+      note: "Für andere Entitäten setze <code>entities:</code> im YAML-Editor.",
     },
   },
 };
@@ -769,6 +801,7 @@ class AppleHealthCardEditor extends HTMLElement {
           <option value="it"${sel("it")}>Italiano</option>
           <option value="en"${sel("en")}>English</option>
           <option value="es"${sel("es")}>Español</option>
+          <option value="de"${sel("de")}>Deutsch</option>
         </select></div>
       <p>${E.note}</p>`;
 
