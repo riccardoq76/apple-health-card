@@ -183,7 +183,7 @@ Things to know:
 
 The card shows the values and units that Home Assistant gives it. If your Home Assistant uses imperial units and the sensors have a device class, the values arrive already converted (for example pounds and miles) and the card shows them as they are. It does not convert anything itself. The goals for the rings (kcal, minutes, steps) do not depend on the unit system.
 
-## Trends card (beta)
+## Trends card
 
 The same file also contains a second card, `custom:apple-health-trends`: the last days of sleep, heart rate, activity and weight, in the same style. It does not need apexcharts-card. Tap (or click) a day to see its value.
 
@@ -193,6 +193,8 @@ prefix: iphone
 days: 14
 goals:
   sleep: 7
+grid_options:
+  columns: full
 ```
 
 | Option | Default | Description |
@@ -209,8 +211,9 @@ Things to know:
 - It uses the raw history of Home Assistant, for the reason explained below, so it is limited by the recorder retention (10 days by default; see `purge_keep_days`). Days without data are left empty.
 - Each point is one day: the last value for sleep and weight, the daily average for resting heart rate and HRV, the highest value for steps, active energy and exercise minutes (counters that grow during the day, so today's bar is still partial).
 - The card asks Home Assistant for the history at most every 10 minutes. If that fails, it says so.
+- On wide screens the sections go in two columns (Sleep | Heart, Activity | Body). The card must be wide enough (about 760 px): put it in a section with `column_span: 2`, in a view with `max_columns: 2`. Phones show one column.
 - It has no visual editor yet: use the YAML editor. A full example is in [`examples/dashboard-trends.yaml`](examples/dashboard-trends.yaml).
-- This card is new: if something looks wrong with your data, please open an issue.
+- If something looks wrong with your data, please open an issue.
 
 ## Trend charts (with apexcharts-card)
 

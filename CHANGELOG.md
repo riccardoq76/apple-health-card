@@ -1,20 +1,10 @@
 # Changelog
 
-## 2.5.0-beta.4 — 2026-10-09 (pre-release)
+## 2.5.0 — 2026-10-09
 
-- Trends card: the vertical scale of line charts (resting heart rate, HRV, VO2 max) now follows the data more closely. HRV with values between 15 and 60 used to get a 0–100 axis; now it is about 10–70.
-
-## 2.5.0-beta.3 — 2026-10-09 (pre-release)
-
-- Trends card: on wide screens (card wider than about 760 px) the sections are laid out in two columns, like a two-column dashboard (Sleep | Heart, Activity | Body). Charts inside a section stay stacked. Narrow screens are unchanged.
-
-## 2.5.0-beta.2 — 2026-10-09 (pre-release)
-
-- Trends card: now wrapped in a `ha-card` with the same border and background as the main card.
-
-## 2.5.0-beta.1 — 2026-10-09 (pre-release)
-
-- **New card `custom:apple-health-trends`** (beta), in the same file: the trends page as a card, in the style of the main card. Sleep (total and stages), resting heart rate and HRV (daily average), steps, active energy, exercise minutes, weight and VO2 max. Tap a day to see its value. No apexcharts-card needed. Options: `days`, `body_days`, `weight_range`, `goals`, `hide`, `title`. English, Italian, Spanish and German.
+- **New card `custom:apple-health-trends`**, in the same file: the trends page as a card, in the style of the main card. Sleep (total and stages), resting heart rate and HRV (daily average), steps, active energy, exercise minutes, weight and VO2 max. Tap a bar or a point to see its value. No apexcharts-card needed. Options: `days`, `body_days`, `weight_range`, `goals`, `hide`, `title`. English, Italian, Spanish and German.
+- Wide screens: sections in two columns (put the card in a section with `column_span: 2`). Phones: stacked.
+- Line charts: the vertical scale follows the data (HRV is no longer drawn on a 0–100 axis).
 - The main card is unchanged. The example dashboard with apexcharts-card is still available; a new example uses the two cards (`examples/dashboard-trends.yaml`).
 
 ## 2.4.1 — 2026-10-09
