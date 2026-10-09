@@ -158,9 +158,9 @@ Things to know:
 
 ## Trend charts
 
-The card shows current values only. For trends, see [`examples/dashboard.yaml`](examples/dashboard.yaml): a two-view dashboard (today + trends) that uses native statistics graphs and [apexcharts-card](https://github.com/RomRider/apexcharts-card).
+The card shows current values only. For trends, see [`examples/dashboard.yaml`](examples/dashboard.yaml): a two-view dashboard (today + trends) that uses native statistics graphs and [apexcharts-card](https://github.com/RomRider/apexcharts-card). The trends view has sleep (total and stages), resting heart rate and HRV (daily average), steps, active energy, exercise minutes with a 30 min goal line, weight and VO2 max. Replace the `iphone` prefix in the sensor names with yours.
 
-Why the sleep and heart charts do not use daily statistics: since data arrives only when the iPhone syncs, a daily statistic repeats the previous night on days without a sync, and mixes two nights on the day a new value arrives. The example uses raw history grouped by day instead, which is limited by the recorder retention (10 days by default).
+Why the sleep and heart charts do not use daily statistics: since data arrives only when the iPhone syncs, a daily statistic repeats the previous night on days without a sync, and mixes two nights on the day a new value arrives. The example uses raw history grouped by day instead, which is limited by the recorder retention (10 days by default; set `purge_keep_days` in the `recorder:` section of `configuration.yaml` to keep more, e.g. 60).
 
 ## Privacy
 
