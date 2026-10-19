@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.1 — 2026-10-19
+
+- German: "Aktivitätsenergie" instead of "Aktive Energie" and "VO2max" instead of "VO2 max" (thanks to Kununa for the review).
+
 ## 2.6.0 — 2026-10-09
 
 - Trends card: visual editor for the basic options (title, sensor prefix, days, goals, language and which charts to show). The rest (`entities`, `weight_range`) is still in YAML.

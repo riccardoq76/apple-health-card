@@ -55,7 +55,7 @@
  *                 exercise, weight, vo2max.
  */
 
-const VERSION = "2.6.0";
+const VERSION = "2.6.1";
 
 /* ------------------------------------------------------------------ */
 /* Definizione metriche                                                */
@@ -278,7 +278,7 @@ const I18N = {
     title: "Gesundheit",
     labels: {
       active_energy: "Bewegen", exercise: "Trainieren", steps: "Schritte",
-      distance: "Gehen + Laufen", flights: "Etagen gestiegen", resting_energy: "Ruheenergie", vo2max: "VO2 max",
+      distance: "Gehen + Laufen", flights: "Etagen gestiegen", resting_energy: "Ruheenergie", vo2max: "VO2max",
       heart_rate: "Herzfrequenz", resting_heart_rate: "Ruheherzfrequenz", walking_heart_rate: "Ø-Herzfrequenz (Gehen)",
       hrv: "Herzfrequenz­variabilität", spo2: "Blutsauerstoff", respiratory_rate: "Atemfrequenz",
       weight: "Gewicht", body_fat: "Körperfettanteil", lean_mass: "Magere Körpermasse", water: "Wasser",
@@ -291,13 +291,13 @@ const I18N = {
     units: { steps: "Schritte", floors: "Etagen", brmin: "Atemzüge/min" },
     spark: "Letzte 7 Tage",
     trends: {
-      ed: { days: "Angezeigte Tage (7–30)", body: "Tage für Gewicht und VO2 max (7–30)", sleep: "Schlafziel (Stunden)", visible: "Sichtbare Diagramme", note: "Für weitere Optionen (Entitäten, Gewichtsbereich) den YAML-Editor verwenden." },
+      ed: { days: "Angezeigte Tage (7–30)", body: "Tage für Gewicht und VO2max (7–30)", sleep: "Schlafziel (Stunden)", visible: "Sichtbare Diagramme", note: "Für weitere Optionen (Entitäten, Gewichtsbereich) den YAML-Editor verwenden." },
       title: "Verlauf", range: "letzte {n} Tage",
       sections: { sleep: "Schlaf", heart: "Herz", activity: "Aktivität", body: "Körper" },
       panels: {
         sleep: "Gesamtschlaf pro Nacht", stages: "Schlafphasen", resting_heart_rate: "Ruheherzfrequenz (Tagesdurchschnitt)",
-        hrv: "Herzfrequenzvariabilität (Tagesdurchschnitt)", steps: "Schritte pro Tag", active_energy: "Aktive Energie",
-        exercise: "Trainingsminuten", weight: "Gewicht", vo2max: "VO2 max",
+        hrv: "Herzfrequenzvariabilität (Tagesdurchschnitt)", steps: "Schritte pro Tag", active_energy: "Aktivitätsenergie",
+        exercise: "Trainingsminuten", weight: "Gewicht", vo2max: "VO2max",
       },
       noData: "keine Daten", total: "Gesamt", noHistory: "Verlauf nicht verfügbar.", loading: "Verlauf wird geladen…",
     },
